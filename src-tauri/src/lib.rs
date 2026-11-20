@@ -696,6 +696,7 @@ fn set_theme(app: AppHandle, st: State<AppState>, theme: String) -> Res<()> {
     }
     let mut e = lock(&st.eng);
     e.cfg.theme = theme.clone();
+    e.cfg.theme_chosen = true;
     e.dirty_cfg = true;
     let _ = app.emit_to("toast", "theme", theme);
     Ok(())

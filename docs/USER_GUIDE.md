@@ -25,7 +25,7 @@ Kestryl answers one question: *is this PC in safe hands?* This guide walks throu
 
 ## The window
 
-![Activity page](screenshots/activity-dark.png)
+![Activity page](screenshots/activity-kestryl.png)
 
 - **Menu** on the left: *Monitor* (Status, Activity, Places, Connections, Alerts, History), *Details* (DNS, Network, Decrypt; Advanced view only) and *Control* (Blocking). **Cut off** and **Settings** are at the bottom. **Collapse menu** shrinks it to icons.
 - **Header**: page title, the **Simple / Advanced** switch, and live upload and download speed for the whole PC.
@@ -43,7 +43,7 @@ The switch in the header is remembered.
 
 ## Status
 
-![Status page](screenshots/status-light.png)
+![Status page](screenshots/status-kestryl.png)
 
 One verdict for the whole PC: **No signs of trouble**, **Worth a look** or **Act now**, with the items that need attention first. Below is a tile and a detailed row for every check, each in plain words with details for IT people:
 
@@ -83,7 +83,7 @@ Every program using the network, live.
 
 **Click a program** to open its details:
 
-![Program details](screenshots/drawer-dark.png)
+![Program details](screenshots/drawer-kestryl.png)
 
 - **What it is**: a plain-words note for about 250 common programs and Windows parts, including whether uploading is normal for it.
 - **Came from**: the site it was downloaded from and when, read from the note Windows attaches to downloads (*Mark of the Web*), or *Microsoft Store*, *part of Windows*, *installed in Program Files*. Downloads from chat-app attachments, file hosts, code sites, bare IPs and cheap domains are marked *worth a look*.
@@ -96,7 +96,7 @@ Every program using the network, live.
 
 ## Places
 
-![Places](screenshots/places-dark.png)
+![Places](screenshots/places-kestryl.png)
 
 A world map of where each day's data was sent, shaded by amount, with your own country outlined. Beside it are the countries and the companies running the servers, each with its sites and programs. Hosting companies (Amazon, Cloudflare, Akamai…) are marked, because their name says whose computer it is, not whose site.
 
@@ -106,7 +106,7 @@ The map shows where the **servers** are, not where the company is from. It works
 
 *Advanced view.* Every program-to-address flow in both directions: domain (from DNS), IP, port and service, protocol, encryption guess, bytes each way, open or closed. Filter by **Internet / Local network / Everything** and **Outgoing / Incoming**. Click a row for **Block IP**, **Block site**, **IP info**, **Peek** and **Trust**.
 
-![Connections](screenshots/connections-dark.png)
+![Connections](screenshots/connections-kestryl.png)
 
 ## Alerts
 
@@ -120,7 +120,7 @@ Severity depends on the program. A signed app in Program Files gets *low*. The s
 
 One entry per day for 30 days, saved every minute so it survives restarts. Hourly sent and received charts with the night hours marked; every program with its destinations, bytes each way and night-time bytes; plus every connection other devices made to this PC.
 
-![History](screenshots/history-dark.png)
+![History](screenshots/history-kestryl.png)
 
 ## DNS lookups
 
@@ -178,7 +178,7 @@ Before changing anything, Kestryl records the old value of every registry entry,
 
 *Advanced view → **Decrypt**.*
 
-![Decrypt](screenshots/decrypt-dark.png)
+![Decrypt](screenshots/decrypt-kestryl.png)
 
 Shows what **one** chosen program sends inside its encrypted connections: method, site, path, address parameters, headers, form fields and JSON or text bodies (gzip unpacked), plus the answer's status, type and size.
 
@@ -241,7 +241,7 @@ Shows what **one** chosen program sends inside its encrypted connections: method
 - **Monitoring**: clipboard guard, file monitoring, Start with Windows.
 - **Threat lists**: what is loaded and when it was updated, **Update lists now**, and an optional free [abuse.ch](https://auth.abuse.ch/) key that adds ThreatFox.
 - **Country data**: status of the DB-IP database and **Update now**.
-- **Theme**: Dark, Light, Kestryl or Follow Windows.
+- **Theme**: Kestryl (the default), Dark, Light or Follow Windows.
 - **Trusted programs** and **Trusted IPs and domains**.
 - **Diagnostics**: mode, events received, dropped events, errors. Useful in bug reports.
 

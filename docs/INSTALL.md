@@ -35,8 +35,8 @@ Open the [latest release](https://github.com/HacanAle/Kestryl/releases/latest) a
 1. Download `Kestryl_<version>_x64-setup.exe`.
 2. Optional but recommended: [verify it](#verify-your-download).
 3. Double-click it. If SmartScreen shows a blue warning, see [the next section](#windows-protected-your-pc).
-4. Allow the administrator prompt. The setup installs for all users of the PC into `C:\Program Files\Kestryl`.
-5. Start **Kestryl** from the Start menu.
+4. Allow the administrator prompt and follow the setup. It installs for all users of the PC into `C:\Program Files\Kestryl`, adds a Start menu entry and, if you leave the box ticked, an icon on the desktop.
+5. Leave **Run Kestryl** ticked on the last page, or start **Kestryl** from the Start menu later.
 
 ## "Windows protected your PC"
 
@@ -53,7 +53,7 @@ If you'd rather be sure first, check the file as described below. Every Kestryl 
 Download `SHA256SUMS.txt` from the same release. Then, in PowerShell, in your Downloads folder:
 
 ```powershell
-Get-FileHash .\Kestryl_1.7.9_x64-setup.exe -Algorithm SHA256
+Get-FileHash .\Kestryl_1.8.0_x64-setup.exe -Algorithm SHA256
 ```
 
 The long hexadecimal value must match the line for that file in `SHA256SUMS.txt`, character for character.
@@ -63,7 +63,7 @@ The long hexadecimal value must match the line for that file in `SHA256SUMS.txt`
 Each release file carries a signed attestation made by GitHub Actions: which repository, commit and workflow produced it. With the [GitHub CLI](https://cli.github.com):
 
 ```powershell
-gh attestation verify .\Kestryl_1.7.9_x64-setup.exe --repo HacanAle/Kestryl
+gh attestation verify .\Kestryl_1.8.0_x64-setup.exe --repo HacanAle/Kestryl
 ```
 
 `Verification succeeded!` means this exact file was built by this repository's [release workflow](../.github/workflows/release.yml) and hasn't been modified since. You can also see the attestations on the repository's **Actions → Attestations** page.

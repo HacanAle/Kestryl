@@ -2,7 +2,7 @@
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Kestryl",
   "mainBinaryName": "Kestryl",
-  "version": "1.7.9",
+  "version": "1.8.0",
   "identifier": "com.kestryl.app",
   "build": {
     "frontendDist": "../ui"
@@ -19,8 +19,19 @@
     "targets": ["nsis"],
     "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.ico"],
     "shortDescription": "See and stop what leaves your PC.",
+    "publisher": "Kestryl",
+    "copyright": "© 2026 Kestryl contributors",
+    "homepage": "https://github.com/HacanAle/Kestryl",
     "windows": {
-      "nsis": { "installMode": "perMachine", "languages": ["English"] }
+      "nsis": {
+        "installMode": "perMachine",
+        "languages": ["English"],
+        "installerIcon": "icons/icon.ico",
+        "uninstallerIcon": "icons/icon.ico",
+        "headerImage": "windows/nsis-header.bmp",
+        "sidebarImage": "windows/nsis-sidebar.bmp",
+        "installerHooks": "windows/installer.nsh"
+      }
     }
   }
 }

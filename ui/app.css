@@ -1,6 +1,6 @@
 /* Kestryl, "Monitor" look, softer surfaces: grey canvas, borderless rounded cards, pill buttons,
    a labelled menu that collapses to icons, a floating program drawer. Logo blue is the accent;
-   red / orange / green / blue only for states and actions. Dark is the default; data-theme="light" or "kestryl"
+   red / orange / green / blue only for states and actions. Plain :root is the dark set; data-theme="kestryl" (the default, set in index.html), "light" or "dark"
    on <html> switches every token. Windows fonts only. */
 :root {
   --bg: #0e1013; --rail: #0e1013; --panel: #171a1e; --panel2: #1f2329; --side: #171a1e;
@@ -626,3 +626,35 @@ table.hdr td:first-child { color: var(--tx3); white-space: nowrap; width: 1%; }
 #tab-dns .scroll { display: flex; flex-direction: column; overflow: hidden; }
 /* short windows: a lower activity graph leaves room for the program table */
 @media (max-height: 860px) { #act-graph { height: 150px; } }
+
+/* ---------------------------------------------------------------- opening animation
+   Shown once per start, the first time the window is on screen (splash.js). Always light, whatever the
+   theme: the bird glides in, its constellation dots light up along the lines, the wordmark settles, then
+   everything fades into the app. Click skips it. */
+#splash { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; cursor: default; user-select: none;
+  background: radial-gradient(75% 85% at 50% 42%, #ffffff 0%, #f2f8fe 34%, #deedfb 68%, #c6dff6 100%); }
+#splash .sp-in { position: relative; display: grid; justify-items: center; gap: 26px; margin-top: -24px; }
+#splash .sp-halo { position: absolute; left: 50%; top: 74px; width: 340px; height: 340px; margin: -170px 0 0 -170px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, .95) 0%, rgba(255, 255, 255, .55) 38%, rgba(255, 255, 255, 0) 70%); opacity: 0; }
+#splash .sp-mark { position: relative; width: 128px; height: 147px; opacity: 0; }
+#splash .sp-mark img { display: block; width: 100%; height: 100%; }
+#splash .sp-mark i { position: absolute; left: var(--x); top: var(--y); width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; border-radius: 50%; background: #fff;
+  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, .6), 0 0 12px 4px rgba(86, 190, 255, .85); opacity: 0; transform: scale(0); }
+#splash .sp-word { font: 400 20px/1 var(--fd); letter-spacing: .44em; padding-left: .44em; text-transform: uppercase; color: #0e1d2b; opacity: 0; }
+#splash.go { animation: sp-out .45s cubic-bezier(.4, 0, .2, 1) 1.8s forwards; }
+#splash.go .sp-in { animation: sp-zoom .45s cubic-bezier(.4, 0, 1, 1) 1.8s forwards; }
+#splash.go .sp-halo { animation: sp-halo 1.1s ease-out .1s forwards; }
+#splash.go .sp-mark { animation: sp-fly .8s cubic-bezier(.16, 1, .3, 1) .05s forwards; }
+#splash.go .sp-mark i { animation: sp-dot .5s cubic-bezier(.34, 1.56, .64, 1) var(--d) forwards; }
+#splash.go .sp-word { animation: sp-word .8s cubic-bezier(.16, 1, .3, 1) .6s forwards; }
+#splash.skip, #splash.skip .sp-in { animation: sp-out .2s ease forwards; }
+@keyframes sp-fly { from { opacity: 0; transform: translate(-30px, 26px) rotate(-8deg) scale(.84); } 55% { opacity: 1; } to { opacity: 1; transform: none; } }
+@keyframes sp-halo { from { opacity: 0; transform: scale(.6); } to { opacity: 1; transform: none; } }
+@keyframes sp-dot { 0% { opacity: 0; transform: scale(0); } 55% { opacity: 1; transform: scale(1.8); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes sp-word { from { opacity: 0; letter-spacing: .9em; padding-left: .9em; } to { opacity: 1; letter-spacing: .44em; padding-left: .44em; } }
+@keyframes sp-zoom { to { transform: scale(1.06); } }
+@keyframes sp-out { to { opacity: 0; visibility: hidden; } }
+@media (prefers-reduced-motion: reduce) {
+  #splash.go .sp-halo, #splash.go .sp-mark, #splash.go .sp-mark i, #splash.go .sp-word { animation-duration: .2s; animation-delay: 0s; }
+  #splash.go, #splash.go .sp-in { animation-delay: .9s; }
+}

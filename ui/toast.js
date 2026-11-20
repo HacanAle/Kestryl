@@ -14,8 +14,9 @@ function arm(ms = 15000) {
   timer = setTimeout(() => (hover ? arm(3000) : win.hide()), ms);
 }
 
-// dark (default) | light | kestryl | system; older palette names count as dark.
+// kestryl (default) | dark | light | system.
 function applyTheme(t) {
+  if (!['dark', 'light', 'kestryl', 'system'].includes(t)) t = 'kestryl';
   const light = t === 'light' || (t === 'system' && matchMedia('(prefers-color-scheme: light)').matches);
   document.documentElement.dataset.theme = t === 'kestryl' ? 'kestryl' : light ? 'light' : 'dark';
 }

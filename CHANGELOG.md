@@ -2,6 +2,14 @@
 
 All notable changes to Kestryl are listed here. Versions follow [Semantic Versioning](https://semver.org).
 
+## [1.8.0] - 2026-11-20
+
+### Look and feel
+- New setup wizard: Kestryl's icon on Setup.exe and its uninstaller instead of the generic installer icon, branded welcome, header and finish pages, current Windows controls and font, and the publisher and copyright in the file properties.
+- Kestryl opens with a short animation of its logo. It plays once per start, the first time the window appears; a click skips it.
+- The Kestryl theme is now the default for everyone, including existing users, until you pick another theme in Settings.
+- Screenshots and the banner on GitHub show the Kestryl theme.
+
 ## [1.7.9] - 2026-11-20
 
 The first public release.
@@ -28,4 +36,5 @@ The first public release.
 - Setup installs per machine into Program Files.
 - Releases are built by GitHub Actions with SHA-256 checksums and build provenance attestations.
 
+[1.8.0]: https://github.com/HacanAle/Kestryl/releases/tag/v1.8.0
 [1.7.9]: https://github.com/HacanAle/Kestryl/releases/tag/v1.7.9

@@ -127,7 +127,7 @@ const colOf = name => cssv(slotOf.get(name) || '--s6');
 const sw = name => `<span class="sw" style="background:${colOf(name)}"></span>`;
 
 const state = {
-  alertSel: null, theme: 'dark', connSub: '', snapN: 0, connSel: null,
+  alertSel: null, theme: 'kestryl', connSub: '', snapN: 0, connSel: null,
   tab: 'status', snap: null, sel: null, sort: { key: 'activity', dir: -1 },
   alertSev: 0, alerts: [], alertSig: '', open: new Set(), rules: null, settings: null, autostart: null, netExtra: null,
   status: null, statusAt: 0, checking: false, hist: null, histDays: [], histDay: null, histErr: '', histOpen: new Set(),
@@ -2355,16 +2355,17 @@ function renderPeek(r) {
 
 // ---------------------------------------------------------------- theme
 
-const THEMES = [['dark', 'Dark', ['dk']], ['light', 'Light', ['lt']], ['kestryl', 'Kestryl', ['ks']], ['system', 'Follow Windows', ['lt', 'dk']]];
+// Kestryl is everyone's theme until they pick another one in Settings (config.rs DEFAULT_THEME).
+const THEMES = [['kestryl', 'Kestryl', ['ks']], ['dark', 'Dark', ['dk']], ['light', 'Light', ['lt']], ['system', 'Follow Windows', ['lt', 'dk']]];
 const lightQ = matchMedia('(prefers-color-scheme: light)');
 function applyTheme(t) {
-  state.theme = ['dark', 'light', 'kestryl', 'system'].includes(t) ? t : 'dark';
+  state.theme = ['dark', 'light', 'kestryl', 'system'].includes(t) ? t : 'kestryl';
   const light = state.theme === 'light' || (state.theme === 'system' && lightQ.matches);
   document.documentElement.dataset.theme = state.theme === 'kestryl' ? 'kestryl' : light ? 'light' : 'dark';
 }
 lightQ.addEventListener('change', () => { applyTheme(state.theme); if (state.tab === 'status') renderStatus(); });
-invoke('settings').then(s => { state.settings = s; applyTheme(s.theme); applyView(s.advanced); }).catch(() => applyTheme('dark'));
-applyTheme('dark');
+invoke('settings').then(s => { state.settings = s; applyTheme(s.theme); applyView(s.advanced); }).catch(() => applyTheme('kestryl'));
+applyTheme('kestryl');
 
 // ---------------------------------------------------------------- simple / advanced view
 

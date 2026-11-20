@@ -19,8 +19,11 @@ pub struct Config {
     pub known: Vec<String>,
     /// First run: learn what is normal silently until this time.
     pub learning_until: u64,
-    /// UI colours: dark | light | system (older palettes mist/slate/sky/sage read as dark).
+    /// UI colours: kestryl | dark | light | system (older palettes mist/slate/sky/sage read as dark).
     pub theme: String,
+    /// The user picked `theme` in Settings. Until then Kestryl's own theme is used, also for
+    /// configs written by older versions (which saved "dark" without anyone choosing it).
+    pub theme_chosen: bool,
     /// Free abuse.ch Auth-Key: adds the ThreatFox list of control servers and malware hashes.
     pub abuse_key: String,
     /// Trusted IPs, ranges and domains: never alerted, hidden unless `show`.
@@ -102,7 +105,8 @@ impl Default for Config {
             domain_blocks: vec![],
             known: vec![],
             learning_until: 0,
-            theme: "dark".into(),
+            theme: DEFAULT_THEME.into(),
+            theme_chosen: false,
             abuse_key: String::new(),
             trusted_dests: vec![],
             file_watch: true,
@@ -124,12 +128,23 @@ pub fn dir() -> PathBuf {
     local_appdata().join("Kestryl")
 }
 
+/// The theme everyone starts with, until they pick one in Settings.
+pub const DEFAULT_THEME: &str = "kestryl";
+
 /// Returns the config and whether this is the first run.
 pub fn load() -> (Config, bool) {
     match std::fs::read_to_string(dir().join("config.json")) {
-        Ok(s) => (serde_json::from_str(&s).unwrap_or_default(), false),
+        Ok(s) => (parse(&s), false),
         Err(_) => (Config::default(), true),
     }
+}
+
+fn parse(s: &str) -> Config {
+    let mut c: Config = serde_json::from_str(s).unwrap_or_default();
+    if !c.theme_chosen {
+        c.theme = DEFAULT_THEME.into();
+    }
+    c
 }
 
 fn write_atomic(name: &str, data: &str) {
@@ -160,5 +175,22 @@ pub fn load_alerts() -> Vec<Alert> {
 pub fn save_alerts(a: &[Alert]) {
     if let Ok(s) = serde_json::to_string(a) {
         write_atomic("alerts.json", &s);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn kestryl_theme_until_the_user_picks_one() {
+        assert_eq!(Config::default().theme, "kestryl");
+        // Older versions saved "dark" for everyone, chosen or not.
+        assert_eq!(parse(r#"{"theme":"dark","upload_mb":30}"#).theme, "kestryl");
+        assert_eq!(parse(r#"{"theme":"dark","upload_mb":30}"#).upload_mb, 30);
+        // A theme picked in Settings stays.
+        assert_eq!(parse(r#"{"theme":"dark","theme_chosen":true}"#).theme, "dark");
+        assert_eq!(parse(r#"{"theme":"system","theme_chosen":true}"#).theme, "system");
+        assert_eq!(parse("not json").theme, "kestryl");
     }
 }

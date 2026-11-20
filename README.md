@@ -30,12 +30,12 @@ It is free and open source, and runs entirely on your PC. You don't need an acco
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/screenshots/status-dark.png" alt="Status page: one verdict for the whole PC"><br><sub><b>Status.</b> One verdict for the whole PC, in plain words.</sub></td>
-    <td width="50%"><img src="docs/screenshots/alerts-dark.png" alt="Alerts page with the reason and one-click actions"><br><sub><b>Alerts.</b> What happened, why it matters, and buttons to act.</sub></td>
+    <td width="50%"><img src="docs/screenshots/status-kestryl.png" alt="Status page: one verdict for the whole PC"><br><sub><b>Status.</b> One verdict for the whole PC, in plain words.</sub></td>
+    <td width="50%"><img src="docs/screenshots/alerts-kestryl.png" alt="Alerts page with the reason and one-click actions"><br><sub><b>Alerts.</b> What happened, why it matters, and buttons to act.</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="docs/screenshots/places-dark.png" alt="World map of where data was sent"><br><sub><b>Places.</b> The countries and companies your data went to.</sub></td>
-    <td width="50%"><img src="docs/screenshots/drawer-dark.png" alt="Program details: publisher, where it was downloaded from, signals"><br><sub><b>Program details.</b> Who made it, where it came from, what it did.</sub></td>
+    <td width="50%"><img src="docs/screenshots/places-kestryl.png" alt="World map of where data was sent"><br><sub><b>Places.</b> The countries and companies your data went to.</sub></td>
+    <td width="50%"><img src="docs/screenshots/drawer-kestryl.png" alt="Program details: publisher, where it was downloaded from, signals"><br><sub><b>Program details.</b> Who made it, where it came from, what it did.</sub></td>
   </tr>
 </table>
 
@@ -55,7 +55,7 @@ It is free and open source, and runs entirely on your PC. You don't need an acco
 | 🎥 **Camera and microphone watch** | Shows which program uses them right now, from Windows' own record, and alerts on unexpected ones. |
 | ☠️ **Known malware servers** | Every connection and DNS lookup is checked against free threat lists (abuse.ch, C2IntelFeeds, Spamhaus DROP, Emerging Threats). |
 | 🔬 **Look inside when you need to** | *Peek* captures one connection for a few seconds and shows whether it is really encrypted and where it really goes. *Decrypt* (password-protected, time-limited) shows what one chosen program sends inside HTTPS. |
-| 👓 **Simple or Advanced** | *Simple* speaks plain words for everyone. *Advanced* adds IPs, ports, PIDs, DNS, command lines and hashes for IT people. Dark, Light, Kestryl and Follow-Windows themes. |
+| 👓 **Simple or Advanced** | *Simple* speaks plain words for everyone. *Advanced* adds IPs, ports, PIDs, DNS, command lines and hashes for IT people. Kestryl (the default), Dark, Light and Follow-Windows themes. |
 
 ## Built to be trusted
 
@@ -74,8 +74,8 @@ A security tool has full access to your PC, so you shouldn't have to take it on 
 
 | File | For |
 |---|---|
-| **`Kestryl_1.7.9_x64-setup.exe`** | Most people. Installs to *Program Files* (recommended: only administrators can change it there), adds a Start menu entry and an uninstaller. |
-| `Kestryl_1.7.9_x64_portable.exe` | No install. Run it from a folder of your choice, for example a USB stick or for a quick look. |
+| **`Kestryl_1.8.0_x64-setup.exe`** | Most people. Installs to *Program Files* (recommended: only administrators can change it there), adds a Start menu entry and an uninstaller. |
+| `Kestryl_1.8.0_x64_portable.exe` | No install. Run it from a folder of your choice, for example a USB stick or for a quick look. |
 | `SHA256SUMS.txt` | Checksums of both, to verify your download. |
 | Source code (zip / tar.gz) | Added by GitHub to every release. Build it yourself with [docs/BUILDING.md](docs/BUILDING.md). |
 

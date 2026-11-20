@@ -62,6 +62,14 @@ npx tauri icon docs/assets/app-icon.png -o src-tauri/icons
 
 Then delete the `android`, `ios`, `icon.icns`, `Square*Logo.png` and `StoreLogo.png` outputs; Kestryl is Windows-only. `src-tauri/icons/tray.png` (32 px, bolder) is drawn separately for the tray.
 
+## Setup look
+
+The setup wizard is Tauri's NSIS installer with Kestryl's look on top, set in `tauri.conf.json` (`bundle > windows > nsis`):
+
+- `src-tauri/windows/installer.nsh`: current Windows controls and font, header image on the right, the welcome and finish texts.
+- `src-tauri/windows/nsis-sidebar.bmp` (164 × 314, welcome and finish pages) and `nsis-header.bmp` (150 × 57, the other pages): 24-bit BMP at exactly these sizes, because NSIS stretches anything else.
+- `src-tauri/icons/icon.ico` is the icon of Setup.exe, the uninstaller and Kestryl.exe.
+
 ## Signing your own build (optional)
 
 Official releases are built and published by GitHub Actions (see below). If you ship your own build, you can sign it:
@@ -78,8 +86,8 @@ Kestryl recognises the certificate that signed the running exe, so its own self-
 3. Commit, then tag and push:
 
    ```powershell
-   git tag v1.7.9
-   git push origin main v1.7.9
+   git tag v1.8.0
+   git push origin main v1.8.0
    ```
 
 4. The [release workflow](../.github/workflows/release.yml) runs the tests, builds the setup and the portable exe on a clean Windows runner, writes `SHA256SUMS.txt`, attaches a build-provenance attestation to each file, and publishes the GitHub release with the changelog section as its notes.
