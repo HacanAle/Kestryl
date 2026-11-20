@@ -1,0 +1,25 @@
+name: Feature request
+description: An idea to make Kestryl better.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would it solve?
+      description: What you were trying to do, and what got in the way.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: Your idea
+    validations:
+      required: true
+  - type: dropdown
+    id: who
+    attributes:
+      label: Who is it for?
+      options:
+        - Everyone (Simple view)
+        - IT people (Advanced view)
+        - Developers / forks

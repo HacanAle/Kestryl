@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kestryl</title>
+<link rel="stylesheet" href="app.css">
+</head>
+<body class="simple">
+<nav class="rail" id="tabs" aria-label="Pages">
+  <div class="brand" role="img" aria-label="Kestryl"><span class="lg"><span></span></span><b>Kestryl</b></div>
+  <div class="grp">Monitor</div>
+  <button class="ri on" data-tab="status" data-label="Status"><i class="ic">&#xEA18;</i><span class="lb">Status</span></button>
+  <button class="ri" data-tab="activity" data-label="Activity"><i class="ic">&#xE9D9;</i><span class="lb">Activity</span></button>
+  <button class="ri" data-tab="places" data-label="Places"><i class="ic">&#xE909;</i><span class="lb">Places</span></button>
+  <button class="ri adv" data-tab="connections" data-label="Connections"><i class="ic">&#xF003;</i><span class="lb">Connections</span></button>
+  <button class="ri" data-tab="alerts" data-label="Alerts"><i class="ic">&#xEA8F;</i><span class="lb">Alerts</span><span class="b" id="alert-count"></span></button>
+  <button class="ri" data-tab="history" data-label="History"><i class="ic">&#xE81C;</i><span class="lb">History</span></button>
+  <div class="grp adv">Details</div>
+  <button class="ri adv" data-tab="dns" data-label="DNS"><i class="ic">&#xE774;</i><span class="lb">DNS</span></button>
+  <button class="ri adv" data-tab="network" data-label="Network"><i class="ic">&#xE968;</i><span class="lb">Network</span></button>
+  <button class="ri adv" data-tab="decrypt" data-label="Decrypt"><i class="ic">&#xE72E;</i><span class="lb">Decrypt</span></button>
+  <div class="grp">Control</div>
+  <button class="ri" data-tab="blocked" data-label="Blocking"><i class="ic">&#xE733;</i><span class="lb">Blocking</span></button>
+  <div class="sp"></div>
+  <button class="ri cut" id="cutoff" data-label="Cut off" title="Block every program from reaching the network until you restore it"><i class="ic">&#xE7E8;</i><span class="lb">Cut off</span></button>
+  <button class="ri" data-tab="settings" data-label="Settings"><i class="ic">&#xE713;</i><span class="lb">Settings</span></button>
+  <div class="rdiv"></div>
+  <button class="ri mini-row" id="mini-btn" data-label="Expand menu"><i class="ic">&#xE89F;</i><span class="lb">Collapse menu</span></button>
+</nav>
+
+<div class="frame">
+  <header class="head">
+    <div class="tt"><h1 id="page-title">Status</h1><div class="sub" id="page-sub"></div></div>
+    <div id="head-acts"></div>
+    <div class="grow"></div>
+    <div class="seg view" id="view" role="group" aria-label="View"><button data-view="simple" class="on" title="Plain words; network details tucked away">Simple</button><button data-view="advanced" title="Every detail: addresses, ports, DNS, network, HTTPS decryption">Advanced</button></div>
+    <div class="mode" id="mode"></div>
+    <div class="live">
+      <canvas id="chart" width="120" height="32" aria-label="Traffic, last two minutes"></canvas>
+      <div><small><i class="ic" style="color:var(--accent)">&#xE898;</i>Upload</small><b id="up">–</b></div>
+      <div><small><i class="ic">&#xE896;</i>Download</small><b id="down">–</b></div>
+    </div>
+  </header>
+  <div id="banners"></div>
+  <main>
+    <section id="tab-status" class="on">
+      <div class="scroll pad"><div class="page wide" id="status"></div></div>
+    </section>
+
+    <section id="tab-activity">
+      <div class="split">
+        <div class="pane">
+          <div class="scroll pad" id="act-scroll">
+            <div class="toprow">
+              <div class="panel graph"><svg id="act-graph" aria-label="Upload and download per program, last two minutes"></svg><div class="legend" id="act-legend"></div></div>
+              <aside class="side" id="act-side"></aside>
+            </div>
+            <div class="bar in">
+              <label class="search"><i class="ic">&#xE721;</i><input id="proc-q" type="search" placeholder="Filter programs" spellcheck="false"></label>
+              <label class="check"><input type="checkbox" id="inet-only" checked> Internet only</label>
+              <div class="grow"></div>
+              <span class="muted" id="proc-sum"></span>
+            </div>
+            <div class="tbox"><table class="grid" id="procs"></table></div>
+          </div>
+        </div>
+        <aside class="detail" id="detail" hidden></aside>
+      </div>
+    </section>
+
+    <section id="tab-connections">
+      <div class="pane">
+        <div class="bar">
+          <label class="search"><i class="ic">&#xE721;</i><input id="conn-q" type="search" placeholder="Filter by program, domain, IP or port" spellcheck="false"></label>
+          <div class="seg" id="conn-scope" data-value="internet"><button data-v="internet" class="on">Internet</button><button data-v="lan">Local network</button><button data-v="all">Everything</button></div>
+          <div class="seg" id="conn-dir" data-value="all"><button data-v="all" class="on">Both</button><button data-v="out">Outgoing</button><button data-v="in">Incoming</button></div>
+          <label class="check"><input type="checkbox" id="open-only"> Open only</label>
+          <div class="grow"></div>
+          <span class="muted" id="conn-sum"></span>
+        </div>
+        <div class="scroll pad"><div class="cgrid" id="conn-grid"><div><table class="grid" id="conns"></table></div><div class="panel cinfo" id="conn-info" hidden></div></div></div>
+      </div>
+    </section>
+
+    <section id="tab-alerts">
+      <div class="pane">
+        <div class="bar">
+          <div class="seg" id="alert-filter">
+            <button data-sev="0" class="on">All<em id="af-0"></em></button>
+            <button data-sev="3">High<em id="af-3"></em></button>
+            <button data-sev="2">Medium<em id="af-2"></em></button>
+            <button data-sev="1">Low<em id="af-1"></em></button>
+          </div>
+          <div class="grow"></div>
+          <button class="btn" id="alerts-read">Mark all read</button>
+          <button class="btn" id="alerts-clear">Clear all</button>
+        </div>
+        <div class="scroll" id="alert-list"></div>
+      </div>
+    </section>
+
+    <section id="tab-history">
+      <div class="scroll pad"><div class="page wide" id="history"></div></div>
+    </section>
+
+    <section id="tab-places">
+      <div class="scroll pad"><div class="page wide" id="places"></div></div>
+    </section>
+
+    <section id="tab-decrypt">
+      <div class="scroll pad"><div class="page wide" id="decrypt"></div></div>
+    </section>
+
+    <section id="tab-dns">
+      <div class="pane">
+        <div class="bar">
+          <label class="search"><i class="ic">&#xE721;</i><input id="dns-q" type="search" placeholder="Filter by name, program or address" spellcheck="false"></label>
+          <span class="muted">Every name a program looked up, newest first. Needs full monitoring.</span>
+        </div>
+        <div class="scroll pad"><div class="tbox"><table class="grid" id="dns"></table></div></div>
+      </div>
+    </section>
+
+    <section id="tab-network">
+      <div class="scroll pad">
+        <div class="page wide">
+          <h2>Look up an IP address</h2>
+          <p class="lead">Owner, network, location and abuse contact of any public address, from ipinfo.io and the official internet registries (RDAP). Free, no account.</p>
+          <details class="help" data-h="net-ip"><summary>How to read this</summary><ul>
+            <li>Paste an address from Connections, an alert or Listening ports. Every destination and alert also has an <b>IP info</b> button.</li>
+            <li><b>Operator</b> is who runs the network. Amazon, Google, Microsoft, Cloudflare, Akamai and Fastly host thousands of sites, so their name tells you the hosting company, not which site it is. Look at the domain in Connections for that.</li>
+            <li><b>Worth a look</b>: an unknown or unsigned program talking to a home internet provider (a residential address), a small hosting company, or a country you have nothing to do with.</li>
+            <li><b>Abuse contact</b> is where to report an attack coming from that address.</li>
+            <li>Private addresses (192.168.x.x, 10.x.x.x) are inside your own network and cannot be looked up.</li>
+          </ul></details>
+          <div class="row"><input type="text" id="ip-q" style="width:300px" placeholder="e.g. 8.8.8.8" spellcheck="false"><button class="btn primary" id="ip-go">Get IP info</button></div>
+        </div>
+        <div id="network"></div>
+      </div>
+    </section>
+
+    <section id="tab-blocked">
+      <div class="scroll pad" id="blocked"></div>
+    </section>
+
+    <section id="tab-settings">
+      <div class="scroll pad" id="settings"></div>
+    </section>
+  </main>
+</div>
+
+<div class="sheet" id="sheet" hidden>
+  <div class="sheet-in"><button class="close-x" id="sheet-close" title="Close">&#xE711;</button><div id="sheet-body"></div></div>
+</div>
+<div class="flash" id="flash" hidden></div>
+<div class="modal" id="modal" hidden>
+  <div class="dialog">
+    <h3 id="modal-title"></h3>
+    <p id="modal-body"></p>
+    <input type="password" id="modal-pw" class="modal-pw" autocomplete="off" spellcheck="false" hidden>
+    <div class="actions"><button class="btn" id="modal-no">Cancel</button><button class="btn primary" id="modal-yes">OK</button></div>
+  </div>
+</div>
+<script src="world.js"></script>
+<script src="programs.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

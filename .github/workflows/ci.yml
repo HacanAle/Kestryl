@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Tests (Windows)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Check UI scripts
+        shell: bash
+        run: |
+          for f in ui/app.js ui/toast.js ui/programs.js ui/world.js; do node --check "$f"; done
+          node -e "JSON.parse(require('fs').readFileSync('ui/rules.json', 'utf8'))"
+
+      - name: Unit tests
+        working-directory: src-tauri
+        run: cargo test --lib

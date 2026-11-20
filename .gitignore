@@ -1,0 +1,28 @@
+# Build output
+node_modules/
+src-tauri/target/
+src-tauri/gen/
+dist/
+
+# Design experiments (not part of the app)
+ui-samples/
+
+# Never commit signing keys, certificates or secrets
+*.pfx
+*.p12
+*.key
+*.pem
+*.cer
+*.crt
+.env
+.env.*
+
+# Logs
+*.log
+
+# Editors and OS
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
+.DS_Store

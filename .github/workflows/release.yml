@@ -1,0 +1,114 @@
+# Builds the setup and the portable exe on a clean Windows runner from the tagged commit,
+# writes SHA256SUMS.txt, attests build provenance for every file and publishes the release.
+# Start it by pushing a tag like v1.7.9 (the version in tauri.conf.json must match).
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing tag to build again (for example v1.7.9)
+        required: true
+
+permissions:
+  contents: write      # create the release and upload files
+  id-token: write      # sign the build provenance attestation
+  attestations: write  # store it
+
+concurrency:
+  group: release-${{ github.event.inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build and publish
+    runs-on: windows-latest
+    env:
+      TAG: ${{ github.event.inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Version must match the tag
+        shell: pwsh
+        run: |
+          $v = (Get-Content src-tauri/tauri.conf.json -Raw | ConvertFrom-Json).version
+          if ("v$v" -ne $env:TAG) { throw "tauri.conf.json says $v, but the tag is $env:TAG" }
+          "VERSION=$v" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Install the Tauri CLI
+        run: npm ci
+
+      - name: Unit tests
+        working-directory: src-tauri
+        run: cargo test --lib
+
+      - name: Build setup and exe
+        run: npx tauri build
+
+      - name: Collect files and checksums
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path dist | Out-Null
+          Copy-Item "src-tauri/target/release/bundle/nsis/Kestryl_${env:VERSION}_x64-setup.exe" dist/
+          Copy-Item "src-tauri/target/release/Kestryl.exe" "dist/Kestryl_${env:VERSION}_x64_portable.exe"
+          Push-Location dist
+          Get-ChildItem -Filter *.exe | Sort-Object Name | ForEach-Object {
+            '{0}  {1}' -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower(), $_.Name
+          } | Set-Content -Path SHA256SUMS.txt -Encoding ascii
+          Get-Content SHA256SUMS.txt
+          Pop-Location
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            dist/*.exe
+            dist/SHA256SUMS.txt
+
+      - name: Release notes
+        shell: pwsh
+        run: |
+          $text = (Get-Content CHANGELOG.md -Raw) -replace "`r`n", "`n"
+          $m = [regex]::Match($text, "(?ms)^## \[$([regex]::Escape($env:VERSION))\][^\n]*\n(.*?)(?=^## \[|^\[\d)")
+          $body = if ($m.Success) { $m.Groups[1].Value.Trim() } else { "Kestryl $env:VERSION" }
+          $notes = @"
+          $body
+
+          ### Downloads
+
+          | File | |
+          |---|---|
+          | **Kestryl_${env:VERSION}_x64-setup.exe** | Installer, recommended. Installs to Program Files. |
+          | Kestryl_${env:VERSION}_x64_portable.exe | Portable, no install. |
+          | SHA256SUMS.txt | SHA-256 checksums of both. |
+
+          Windows 10 (2004 or later) or 11, 64-bit. The files are not code-signed yet, so SmartScreen may say "Windows protected your PC": click **More info → Run anyway**.
+
+          **Verify:** ``Get-FileHash <file>`` must match SHA256SUMS.txt, and ``gh attestation verify <file> --repo $env:GITHUB_REPOSITORY`` proves GitHub Actions built it from this tag. See the [install guide](https://github.com/$env:GITHUB_REPOSITORY/blob/main/docs/INSTALL.md).
+          "@
+          ($notes -split "`n" | ForEach-Object { $_ -replace '^          ', '' }) -join "`n" | Set-Content -Path notes.md -Encoding utf8
+          Get-Content notes.md
+
+      - name: Publish the release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $files = Get-ChildItem dist | ForEach-Object { $_.FullName }
+          gh release view $env:TAG *> $null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload $env:TAG @files --clobber
+          } else {
+            gh release create $env:TAG @files --title "Kestryl $env:VERSION" --notes-file notes.md --verify-tag
+          }
+          if ($LASTEXITCODE -ne 0) { throw "gh failed with exit code $LASTEXITCODE" }

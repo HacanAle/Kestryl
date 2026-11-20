@@ -1,0 +1,481 @@
+{
+  "_note": "Kestryl detection data: the files password and wallet stealers go for, and the programs allowed to open them. Kept out of kestryl.exe on purpose: antivirus scanners take a program that carries this list as plain text for a stealer itself (Trojan:Win32/Cryware). Paths are matched lower-case; every list in 'any' must have one hit, 'end' is an ending; the first matching entry wins.",
+  "secrets": [
+    {
+      "kind": "passwords",
+      "label": "saved browser passwords",
+      "any": [
+        [
+          "\\user data\\",
+          "\\opera software\\"
+        ]
+      ],
+      "end": [
+        "\\login data",
+        "\\login data for account"
+      ]
+    },
+    {
+      "kind": "cookies",
+      "label": "browser cookies (your logged-in sessions)",
+      "any": [
+        [
+          "\\user data\\",
+          "\\opera software\\"
+        ]
+      ],
+      "end": [
+        "\\cookies"
+      ]
+    },
+    {
+      "kind": "cards",
+      "label": "saved cards and autofill data",
+      "any": [
+        [
+          "\\user data\\",
+          "\\opera software\\"
+        ]
+      ],
+      "end": [
+        "\\web data"
+      ]
+    },
+    {
+      "kind": "browser_key",
+      "label": "the key that unlocks browser passwords",
+      "any": [
+        [
+          "\\user data\\",
+          "\\opera software\\"
+        ]
+      ],
+      "end": [
+        "\\local state"
+      ]
+    },
+    {
+      "kind": "wallet",
+      "label": "a crypto-wallet browser extension",
+      "any": [
+        [
+          "\\user data\\",
+          "\\opera software\\"
+        ],
+        [
+          "\\local extension settings\\"
+        ],
+        [
+          "nkbihfbeogaeaoehlefnkodbefgpgknn",
+          "bfnaelmomeimhlpmgjnjophhpkkoljpa",
+          "hnfanknocfeofbddgcijnmhnfnkdnaad",
+          "fhbohimaelbohpjbbldcngcnapndodjp",
+          "egjidjbpglichdcondbcbdnbeeppgdph",
+          "ibnejdfjmmkpcnlpebklmnkoeoihofec"
+        ]
+      ]
+    },
+    {
+      "kind": "passwords",
+      "label": "saved browser passwords",
+      "any": [
+        [
+          "\\profiles\\"
+        ],
+        [
+          "\\mozilla\\",
+          "\\thunderbird\\",
+          "\\librewolf\\",
+          "\\waterfox\\"
+        ]
+      ],
+      "end": [
+        "\\logins.json",
+        "\\key4.db",
+        "\\key3.db",
+        "\\signons.sqlite"
+      ]
+    },
+    {
+      "kind": "cookies",
+      "label": "browser cookies (your logged-in sessions)",
+      "any": [
+        [
+          "\\profiles\\"
+        ],
+        [
+          "\\mozilla\\",
+          "\\librewolf\\",
+          "\\waterfox\\"
+        ]
+      ],
+      "end": [
+        "\\cookies.sqlite"
+      ]
+    },
+    {
+      "kind": "cards",
+      "label": "saved form and autofill data",
+      "any": [
+        [
+          "\\profiles\\"
+        ],
+        [
+          "\\mozilla\\",
+          "\\librewolf\\",
+          "\\waterfox\\"
+        ]
+      ],
+      "end": [
+        "\\formhistory.sqlite"
+      ]
+    },
+    {
+      "kind": "windows_creds",
+      "label": "Windows saved passwords (Credential Manager)",
+      "any": [
+        [
+          "\\microsoft\\credentials\\",
+          "\\microsoft\\protect\\",
+          "\\microsoft\\vault\\"
+        ]
+      ]
+    },
+    {
+      "kind": "telegram",
+      "label": "your Telegram login",
+      "any": [
+        [
+          "\\telegram desktop\\tdata\\"
+        ]
+      ]
+    },
+    {
+      "kind": "discord",
+      "label": "your Discord login token",
+      "any": [
+        [
+          "\\discord"
+        ],
+        [
+          "\\local storage\\leveldb\\"
+        ]
+      ]
+    },
+    {
+      "kind": "steam",
+      "label": "your Steam login",
+      "end": [
+        "\\config\\loginusers.vdf"
+      ]
+    },
+    {
+      "kind": "steam",
+      "label": "your Steam login",
+      "any": [
+        [
+          "\\steam\\"
+        ],
+        [
+          "\\ssfn"
+        ]
+      ]
+    },
+    {
+      "kind": "wallet",
+      "label": "a crypto wallet",
+      "any": [
+        [
+          "\\exodus\\",
+          "\\electrum\\wallets\\",
+          "\\atomic\\local storage\\",
+          "\\ethereum\\keystore\\",
+          "\\bitcoin\\wallets\\",
+          "\\coinomi\\",
+          "\\guarda\\",
+          "\\armory\\",
+          "\\jaxx\\"
+        ]
+      ]
+    },
+    {
+      "kind": "wallet",
+      "label": "a crypto wallet",
+      "end": [
+        "\\wallet.dat"
+      ]
+    },
+    {
+      "kind": "keys",
+      "label": "SSH, cloud or FTP login keys",
+      "any": [
+        [
+          "\\.ssh\\id_"
+        ]
+      ]
+    },
+    {
+      "kind": "keys",
+      "label": "SSH, cloud or FTP login keys",
+      "end": [
+        ".ppk",
+        "\\.aws\\credentials",
+        "\\.kube\\config",
+        "\\.docker\\config.json",
+        "\\.git-credentials",
+        "\\filezilla\\recentservers.xml",
+        "\\filezilla\\sitemanager.xml",
+        "\\winscp.ini"
+      ]
+    },
+    {
+      "kind": "keys",
+      "label": "SSH, cloud or FTP login keys",
+      "any": [
+        [
+          "\\.azure\\"
+        ],
+        [
+          "accesstokens.json",
+          "msal_token_cache"
+        ]
+      ]
+    },
+    {
+      "kind": "keys",
+      "label": "SSH, cloud or FTP login keys",
+      "any": [
+        [
+          "\\gcloud\\"
+        ]
+      ],
+      "end": [
+        "credentials.db",
+        "access_tokens.db"
+      ]
+    },
+    {
+      "kind": "mailbox",
+      "label": "your Outlook mailbox",
+      "any": [
+        [
+          "\\microsoft\\outlook\\"
+        ]
+      ],
+      "end": [
+        ".ost",
+        ".pst"
+      ]
+    },
+    {
+      "kind": "vault",
+      "label": "a password-manager vault",
+      "end": [
+        ".kdbx",
+        "\\bitwarden\\data.json"
+      ]
+    },
+    {
+      "kind": "vault",
+      "label": "a password-manager vault",
+      "any": [
+        [
+          "\\1password\\data\\"
+        ]
+      ]
+    }
+  ],
+  "owners": {
+    "passwords": {
+      "browser": true
+    },
+    "cookies": {
+      "browser": true
+    },
+    "cards": {
+      "browser": true
+    },
+    "browser_key": {
+      "browser": true
+    },
+    "wallet": {
+      "browser": true,
+      "names": [
+        "exodus.exe",
+        "atomic wallet.exe",
+        "bitcoin-qt.exe",
+        "coinomi.exe",
+        "guarda.exe",
+        "armoryqt.exe",
+        "jaxx liberty.exe"
+      ],
+      "prefix": [
+        "electrum"
+      ]
+    },
+    "telegram": {
+      "names": [
+        "telegram.exe"
+      ],
+      "dirs": [
+        "\\telegram desktop\\"
+      ]
+    },
+    "discord": {
+      "prefix": [
+        "discord"
+      ],
+      "dirs": [
+        "\\discord"
+      ]
+    },
+    "steam": {
+      "prefix": [
+        "steam"
+      ],
+      "dirs": [
+        "\\steam\\"
+      ]
+    },
+    "keys": {
+      "names": [
+        "ssh.exe",
+        "ssh-agent.exe",
+        "ssh-add.exe",
+        "scp.exe",
+        "sftp.exe",
+        "git.exe",
+        "git-remote-https.exe",
+        "git-credential-manager.exe",
+        "git-credential-manager-core.exe",
+        "sh.exe",
+        "bash.exe",
+        "putty.exe",
+        "pageant.exe",
+        "plink.exe",
+        "pscp.exe",
+        "psftp.exe",
+        "puttygen.exe",
+        "winscp.exe",
+        "filezilla.exe",
+        "kubectl.exe",
+        "docker.exe",
+        "com.docker.backend.exe",
+        "docker desktop.exe",
+        "aws.exe",
+        "terraform.exe",
+        "gh.exe",
+        "code.exe",
+        "cursor.exe",
+        "windsurf.exe",
+        "mobaxterm.exe",
+        "termius.exe",
+        "kitty.exe",
+        "tortoisegitplink.exe",
+        "sourcetree.exe",
+        "githubdesktop.exe",
+        "github desktop.exe",
+        "idea64.exe",
+        "pycharm64.exe",
+        "webstorm64.exe",
+        "rider64.exe",
+        "goland64.exe",
+        "phpstorm64.exe",
+        "wsl.exe",
+        "wslhost.exe",
+        "docker-credential-desktop.exe",
+        "docker-credential-wincred.exe",
+        "com.docker.cli.exe",
+        "com.docker.build.exe",
+        "docker-compose.exe",
+        "docker-buildx.exe",
+        "helm.exe",
+        "minikube.exe",
+        "podman.exe",
+        "k9s.exe",
+        "lens.exe"
+      ],
+      "dirs": [
+        "\\program files\\docker\\",
+        "\\program files\\git\\",
+        "\\program files\\openssh",
+        "\\windows\\system32\\openssh\\",
+        "\\program files\\putty\\",
+        "\\program files (x86)\\winscp\\",
+        "\\program files\\filezilla",
+        "\\program files\\jetbrains\\",
+        "\\program files\\microsoft vs code\\",
+        "\\appdata\\local\\programs\\microsoft vs code\\",
+        "\\appdata\\local\\githubdesktop\\",
+        "\\google\\cloud sdk\\",
+        "\\program files\\amazon\\awscliv2\\",
+        "\\program files\\rancher desktop\\",
+        "\\program files\\redhat\\podman\\",
+        "\\program files\\kubernetes\\"
+      ]
+    },
+    "mailbox": {
+      "names": [
+        "outlook.exe",
+        "olk.exe",
+        "scanpst.exe"
+      ],
+      "sync": true
+    },
+    "vault": {
+      "names": [
+        "keepass.exe",
+        "keepassxc.exe",
+        "keepassxc-proxy.exe",
+        "keeweb.exe",
+        "bitwarden.exe",
+        "1password.exe"
+      ],
+      "sync": true
+    }
+  },
+  "samples": [
+    [
+      "passwords",
+      "\\Device\\HarddiskVolume3\\Users\\a\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Login Data"
+    ],
+    [
+      "cookies",
+      "C:\\Users\\a\\AppData\\Local\\Microsoft\\Edge\\User Data\\Default\\Network\\Cookies"
+    ],
+    [
+      "browser_key",
+      "C:\\Users\\a\\AppData\\Local\\Google\\Chrome\\User Data\\Local State"
+    ],
+    [
+      "passwords",
+      "C:\\Users\\a\\AppData\\Roaming\\Mozilla\\Firefox\\Profiles\\x.default\\logins.json"
+    ],
+    [
+      "telegram",
+      "C:\\Users\\a\\AppData\\Roaming\\Telegram Desktop\\tdata\\key_datas"
+    ],
+    [
+      "keys",
+      "C:\\Users\\a\\.ssh\\id_ed25519"
+    ],
+    [
+      "windows_creds",
+      "C:\\Users\\a\\AppData\\Roaming\\Microsoft\\Protect\\S-1-5-21\\abc"
+    ],
+    [
+      "wallet",
+      "C:\\Users\\a\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Local Extension Settings\\nkbihfbeogaeaoehlefnkodbefgpgknn\\000003.log"
+    ],
+    [
+      "none",
+      "C:\\Users\\a\\AppData\\Roaming\\Code\\Network\\Cookies"
+    ],
+    [
+      "none",
+      "C:\\Windows\\System32\\config\\SAM"
+    ]
+  ],
+  "demo_mail": "Subject: Report DESKTOP-4F2K / user\r\n\r\nHost: https://accounts.example.com\r\nUsername: user@example.com\r\nPassword: Summer2026!\r\nApplication: Chrome\r\n----\r\nHost: https://bank.example\r\nUsername: user77\r\nPassword: Winter2025?\r\n.\r\n",
+  "_note_owners": "Owners may open their own kind of file. 'dirs' are folder fragments of the program's path; for keys they are install folders under Program Files (a copy in AppData does not count)."
+}

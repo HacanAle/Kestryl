@@ -1,0 +1,39 @@
+name: Missed detection or false alarm
+description: Kestryl missed something bad, or alerted on something harmless.
+labels: [detection]
+body:
+  - type: markdown
+    attributes:
+      value: Please **leave out personal data** (your user name in paths, private IP addresses, file names).
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Which one?
+      options:
+        - False alarm (alert on something harmless)
+        - Missed detection (something bad, no alert)
+    validations:
+      required: true
+  - type: input
+    id: program
+    attributes:
+      label: Program
+      description: Name, publisher and, if public, where it comes from.
+      placeholder: "example.exe, signed by Example Ltd, from example.com"
+    validations:
+      required: true
+  - type: input
+    id: alert
+    attributes:
+      label: Alert title (for false alarms)
+  - type: textarea
+    id: what
+    attributes:
+      label: What did the program do, and what should Kestryl have done?
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Kestryl version
+      placeholder: "1.7.9"
