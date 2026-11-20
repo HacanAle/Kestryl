@@ -24,7 +24,7 @@ The first public release.
 - Peek (short packet capture of one connection) and password-protected HTTPS decryption of one program.
 
 ### Security
-- Full security audit before release; nine issues fixed, one critical. See [SECURITY.md](SECURITY.md#audit-of-v179).
+- Full security audit before release; nine issues fixed, one critical. See [SECURITY.md](https://github.com/HacanAle/Kestryl/blob/main/SECURITY.md#audit-of-v179).
 - Setup installs per machine into Program Files.
 - Releases are built by GitHub Actions with SHA-256 checksums and build provenance attestations.
 

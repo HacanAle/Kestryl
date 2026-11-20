@@ -1,9 +1,12 @@
 version: 2
 updates:
+  # Only updates the lock file within the versions Cargo.toml already allows (compatible fixes,
+  # including security patches). Breaking upgrades (ureq 3, windows 0.62, ...) are done by hand.
   - package-ecosystem: cargo
     directory: /src-tauri
     schedule:
       interval: monthly
+    versioning-strategy: lockfile-only
     groups:
       rust:
         patterns: ["*"]

@@ -18,9 +18,9 @@ jobs:
     name: Tests (Windows)
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
 
@@ -36,6 +36,17 @@ jobs:
           for f in ui/app.js ui/toast.js ui/programs.js ui/world.js; do node --check "$f"; done
           node -e "JSON.parse(require('fs').readFileSync('ui/rules.json', 'utf8'))"
 
+      # On failure the failing tests (or the compile errors) are shown as one annotation on the
+      # run and pull-request page, readable without opening the log.
       - name: Unit tests
         working-directory: src-tauri
-        run: cargo test --lib
+        shell: bash
+        run: |
+          set -o pipefail
+          if ! cargo test --lib --color never 2>&1 | tee test.log; then
+            msg=$(awk '/^failures:$/{f=1} f{print} /^test result/{exit}' test.log | head -80)
+            [ -z "$msg" ] && msg=$(grep -E -A6 '^error(\[E[0-9]+\])?:' test.log | head -80)
+            msg=${msg//'%'/'%25'}; msg=${msg//$'\r'/}; msg=${msg//$'\n'/'%0A'}
+            echo "::error title=cargo test failed::${msg}"
+            exit 1
+          fi
