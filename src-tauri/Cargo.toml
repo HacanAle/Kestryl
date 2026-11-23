@@ -32,6 +32,7 @@ tokio-rustls = { version = "0.26", default-features = false, features = ["ring",
 rustls-native-certs = "0.8"
 rcgen = { version = "0.13", default-features = false, features = ["crypto", "ring", "pem"] }
 argon2 = "0.5"
+tauri-plugin-updater = "2"
 
 [target."cfg(windows)".dependencies]
 winreg = "0.55"

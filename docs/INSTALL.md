@@ -110,10 +110,12 @@ If Kestryl runs from a folder your own account can change (anything outside *Pro
 
 ## Updating
 
-Kestryl has no auto-updater and never downloads program code. To update:
+Kestryl checks its GitHub releases once a day and pops up when a new version is out (Settings → Updates; you can turn the check off there).
 
-1. Watch the repository for releases: **Watch → Custom → Releases** on GitHub.
-2. Download the new setup and run it. It replaces the old version. Your settings, trusted programs, blocks and history are kept.
+- **Installed with Setup:** click **Update now** on the alert or in Settings → Updates. Kestryl downloads the new setup, installs it only if it is signed with Kestryl's update key, and starts again. Your settings, trusted programs, blocks and history are kept.
+- **Portable exe, or a release without in-app update files:** click **Open download page** and download the new version yourself.
+
+You can also update by hand at any time: download the new setup and run it. It replaces the old version and keeps your data. To hear about releases on GitHub too: **Watch → Custom → Releases**.
 
 ## Uninstall
 

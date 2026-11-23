@@ -26,12 +26,14 @@ function render(p) {
   if (!p || !p.alert) return;
   const a = (cur = p.alert);
   $('#t').className = 't s' + a.sev;
-  $('#sev').textContent = SEV[a.sev] || 'Alert';
+  // Camera / microphone notices from apps you use for calls: not a risk rating.
+  const notice = a.rule === 'cam_mic_use';
+  $('#sev').textContent = notice ? (a.key.includes('|microphone') ? 'Microphone on' : 'Camera on') : a.rule === 'update' ? 'Update' : SEV[a.sev] || 'Alert';
   $('#more').textContent = p.more ? `+${p.more} more` : 'Kestryl';
   $('#title').textContent = a.title;
   const dest = a.domain || a.ip;
   $('#meta').textContent = `${a.name}${dest ? ' → ' + dest + (a.port ? ':' + a.port : '') : ''}${a.bytes_out ? ' · ' + fmtB(a.bytes_out) : ''}`;
-  $('#actions').innerHTML = `${a.exe ? '<button class="btn dangerf" id="block">Block app</button>' : ''}<button class="btn" id="details">Details</button>`;
+  $('#actions').innerHTML = `${a.exe && !notice ? '<button class="btn dangerf" id="block">Block app</button>' : ''}<button class="btn" id="details">Details</button>`;
   if (a.exe) $('#block').onclick = block;
   $('#details').onclick = details;
   arm();

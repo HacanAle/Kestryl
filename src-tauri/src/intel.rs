@@ -237,13 +237,32 @@ fn mtime_ms(p: &std::path::Path) -> u64 {
         .unwrap_or(0)
 }
 
-fn agent() -> Result<ureq::Agent, String> {
+pub(crate) fn agent() -> Result<ureq::Agent, String> {
     let tls = native_tls::TlsConnector::new().map_err(|e| format!("TLS: {e}"))?;
     Ok(ureq::AgentBuilder::new()
         .tls_connector(Arc::new(tls))
-        .timeout(Duration::from_secs(40))
+        // Whole request, body included: a big ThreatFox answer on a slow line needs a while.
+        .timeout(Duration::from_secs(180))
         .user_agent("Kestryl/0.1")
         .build())
+}
+
+/// Largest list Kestryl accepts. ureq's `into_string` stops at 10 MB ("response too big for
+/// into_string"), and a week of ThreatFox is often bigger than that.
+const MAX_LIST: u64 = 256 * 1024 * 1024;
+
+/// Reads a whole answer as text, up to MAX_LIST.
+pub(crate) fn read_body(r: ureq::Response) -> Result<String, String> {
+    use std::io::Read;
+    let mut buf = Vec::new();
+    r.into_reader()
+        .take(MAX_LIST + 1)
+        .read_to_end(&mut buf)
+        .map_err(|e| format!("the download broke off ({e})"))?;
+    if buf.len() as u64 > MAX_LIST {
+        return Err(format!("the list is larger than {} MB", MAX_LIST / (1024 * 1024)));
+    }
+    String::from_utf8(buf).map_err(|_| "the list is not text".into())
 }
 
 fn fetch(agent: &ureq::Agent, s: &Source, key: &str) -> Result<String, String> {
@@ -257,7 +276,7 @@ fn fetch(agent: &ureq::Agent, s: &Source, key: &str) -> Result<String, String> {
         agent.get(s.url).call()
     };
     let body = match r {
-        Ok(r) => r.into_string().map_err(|e| e.to_string())?,
+        Ok(r) => read_body(r)?,
         Err(ureq::Error::Status(401 | 403, _)) => return Err("the abuse.ch Auth-Key was refused".into()),
         Err(ureq::Error::Status(code, _)) => return Err(format!("the list's server answered HTTP {code}")),
         Err(ureq::Error::Transport(t)) => return Err(format!("could not reach the list ({})", t.kind())),

@@ -2,6 +2,18 @@
 
 All notable changes to Kestryl are listed here. Versions follow [Semantic Versioning](https://semver.org).
 
+## [Unreleased]
+
+### New
+- **Update notifications.** Once a day Kestryl asks its GitHub releases page whether a newer version is out, and tells you with a pop-up and an alert (once per version). Settings → Updates shows what's new, has **Check now**, and can turn the daily check off.
+- **Update now** installs a new version from inside Kestryl: it downloads the setup from GitHub, installs it only if it is signed with Kestryl's update key, and restarts. Releases that are not signed for this, and the portable exe, get a link to the download page instead.
+- **Known-safe services.** Addresses of Google's, Microsoft 365's and Apple's own services (from the lists these companies publish) and Windows Update and Defender names are tagged on Connections, and alerts that only say a destination looks unusual (timer check-ins, bare IP addresses, uncommon ports) stay quiet for normal programs. Uploads, password-theft, email/FTP, file-sharing and known-malware alerts still fire, and unsigned programs, programs in Temp or Downloads, scripts and Windows tools are never quieted. Google Cloud customer ranges are left out. Settings → Known-safe services: switch it off, switch services off one by one, view every range, and test any address. Connections has **Hide known-safe**.
+
+### Fixed
+- Kestryl now tells you every time the camera turns on, also when it is a browser tab (Chrome, Edge, Firefox…), a call app or a Microsoft Store app. These used to be listed on Status but never popped up. A browser notice explains how to find the tab using it. Settings → Protection has "Camera turned on" (on) and "Microphone turned on" (off at first).
+- Alerts: clicking an alert lower down the list no longer jumps the list back to the top.
+- Threat lists: ThreatFox failed with "response too big for into_string" whenever a week of it was over 10 MB. Lists up to 256 MB are read now, with more time for slow connections.
+
 ## [1.8.0] - 2026-11-20
 
 ### Look and feel

@@ -26,3 +26,6 @@ ui-samples/
 Thumbs.db
 desktop.ini
 .DS_Store
+
+# Kestryl update signing key (see docs/BUILDING.md). Keep a backup elsewhere.
+.signing/
