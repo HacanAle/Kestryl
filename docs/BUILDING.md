@@ -91,3 +91,21 @@ Kestryl recognises the certificate that signed the running exe, so its own self-
    ```
 
 4. The [release workflow](../.github/workflows/release.yml) runs the tests, builds the setup and the portable exe on a clean Windows runner, writes `SHA256SUMS.txt`, attaches a build-provenance attestation to each file, and publishes the GitHub release with the changelog section as its notes.
+
+### In-app updates (update signing key)
+
+Installed copies offer **Update now** only for releases signed with Kestryl's update key. This is the Tauri updater's own free key pair, not a code-signing certificate. Set it up once:
+
+1. Make the key pair (pick a password when asked):
+
+   ```powershell
+   npx tauri signer generate -w "$env:USERPROFILE\.tauri\kestryl.key"
+   ```
+
+2. Put the **public** key it prints (also in `kestryl.key.pub`) into `src-tauri/tauri.conf.json` → `plugins.updater.pubkey`, and commit it. Every build carries it and refuses updates not signed with the matching private key.
+3. On GitHub: **Settings → Secrets and variables → Actions → New repository secret**: `TAURI_SIGNING_PRIVATE_KEY` = the whole content of `kestryl.key`, and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` = its password.
+4. Back up `kestryl.key` and the password (a password manager is a good place). Without them, installed copies can never be updated from inside Kestryl again; users would have to download one new version by hand.
+
+From then on, the release workflow also signs the setup (`…-setup.exe.sig`) and publishes `latest.json`, which installed copies read from `releases/latest/download/latest.json`. Without the secret, releases are built as before, without those two files, and Kestryl only links to the release page.
+
+The first release with a public key in it can only be installed by hand; the ones after it update from inside Kestryl.

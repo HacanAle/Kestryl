@@ -65,6 +65,22 @@ pub fn expected(name_lower: &str) -> bool {
     OK.contains(&name_lower)
 }
 
+/// Browsers: their camera and microphone use is a website in one of their tabs. Windows records
+/// only the browser, never which tab or site.
+pub fn browser(name_lower: &str) -> Option<&'static str> {
+    Some(match name_lower {
+        "chrome.exe" => "Google Chrome",
+        "msedge.exe" => "Microsoft Edge",
+        "firefox.exe" => "Firefox",
+        "brave.exe" => "Brave",
+        "opera.exe" => "Opera",
+        "vivaldi.exe" => "Vivaldi",
+        "arc.exe" => "Arc",
+        "msedgewebview2.exe" => "an app's built-in web view (Edge WebView2)",
+        _ => return None,
+    })
+}
+
 #[cfg(windows)]
 pub fn read() -> Vec<Use> {
     use winreg::enums::{HKEY_CURRENT_USER, KEY_READ};
@@ -121,6 +137,8 @@ mod tests {
         assert_eq!(label(&u), "WindowsCamera");
         assert!(u.active());
         assert!(expected("zoom.exe") && !expected("updater.exe"));
+        assert_eq!(browser("chrome.exe"), Some("Google Chrome"));
+        assert_eq!(browser("zoom.exe"), None);
     }
 }
 

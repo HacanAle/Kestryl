@@ -39,6 +39,19 @@ pub struct Config {
     pub advanced: bool,
     /// Watch the clipboard for swapped wallet addresses and bank account numbers.
     pub clip_guard: bool,
+    /// Pop up every time any program, browsers included, turns the camera on.
+    pub cam_notify: bool,
+    /// The same for the microphone (off by default: calls and voice chat turn it on all day).
+    pub mic_notify: bool,
+    /// Check GitHub once a day for a new Kestryl release.
+    pub update_check: bool,
+    /// The newest version already announced (one pop-up per version).
+    pub update_seen: String,
+    /// Known-safe services (Google, Microsoft 365, Windows Update, Apple) quiet "unusual
+    /// destination" alerts for normal programs.
+    pub safe_on: bool,
+    /// Known-safe services switched off one by one (`safe::SERVICES` ids).
+    pub safe_off: Vec<String>,
     /// Analytics blocking per item id ("windows", "edge", ..., "servers").
     pub analytics: HashMap<String, AnalyticsState>,
     /// HTTPS decryption: password hash, lock-out, and what to undo after a crash.
@@ -114,6 +127,12 @@ impl Default for Config {
             baseline: Baseline::default(),
             advanced: false,
             clip_guard: true,
+            cam_notify: true,
+            mic_notify: false,
+            update_check: true,
+            update_seen: String::new(),
+            safe_on: true,
+            safe_off: vec![],
             analytics: HashMap::new(),
             decrypt: crate::decrypt::Cfg::default(),
         }

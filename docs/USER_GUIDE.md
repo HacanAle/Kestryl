@@ -239,10 +239,13 @@ Shows what **one** chosen program sends inside its encrypted connections: method
 
 - **Alerts**: upload limit (MB per minute), pop-ups on or off, and from which severity.
 - **Monitoring**: clipboard guard, file monitoring, Start with Windows.
+- **Monitoring** also has **Camera turned on** (a pop-up every time any app or browser tab turns the camera on) and **Microphone turned on** (the same for the microphone; off at first).
 - **Threat lists**: what is loaded and when it was updated, **Update lists now**, and an optional free [abuse.ch](https://auth.abuse.ch/) key that adds ThreatFox.
+- **Known-safe services**: Google, Microsoft 365, Windows Update and Defender, and Apple. Connections to their own services are tagged and the "unusual destination" alerts (timer check-ins, bare IP addresses, uncommon ports) stay quiet for normal programs; everything else still alerts, and unsigned programs, programs in Temp or Downloads, scripts and Windows tools are never quieted. Switch the feature or single services off, **View** every range, **Test** an address, **Update lists now**. Google Cloud customer ranges are left out on purpose: anyone can rent a server there.
 - **Country data**: status of the DB-IP database and **Update now**.
 - **Theme**: Kestryl (the default), Dark, Light or Follow Windows.
 - **Trusted programs** and **Trusted IPs and domains**.
+- **Updates**: your version, the newest one and what's new, **Check now**, **Update now**, and the daily check on or off.
 - **Diagnostics**: mode, events received, dropped events, errors. Useful in bug reports.
 
 ## Where Kestryl keeps its data
@@ -256,6 +259,7 @@ Everything lives in `%LOCALAPPDATA%\Kestryl\`:
 | `history\YYYY-MM-DD.json` | One file per day of traffic totals (also per program per hour), kept 30 days |
 | `intel\*.txt` | Downloaded threat lists, refreshed every 12 hours |
 | `geo\country.csv.gz`, `geo\asn.csv.gz` | DB-IP Lite country and ASN databases, refreshed monthly |
+| `safe\*.json` | Google's and Microsoft's published address lists (known-safe services), refreshed daily |
 | `away.json` | The last 30 "while you were away" reports |
 | `kestryl.log` | Errors only |
 

@@ -424,6 +424,7 @@ body.mini .flash { left: calc(50% + 34px); }
 .sheet-in h3 .src { font-weight: 400; color: var(--tx3); }
 .sheet-in dl.kv { margin-top: 4px; }
 .err-text { color: var(--high); margin-top: 10px; }
+.ok-text { color: var(--ok); }
 .pop { position: fixed; z-index: 40; max-width: 380px; padding: 8px 11px; border: 0; border-radius: 10px; background: var(--ink); color: var(--on-ink); font: 12px/1.45 var(--f); white-space: pre-line; overflow-wrap: anywhere; box-shadow: var(--shadow); pointer-events: none; }
 .hint { cursor: help; }
 span.hint:not(.tag) { border-bottom: 1px dotted var(--tx3); }

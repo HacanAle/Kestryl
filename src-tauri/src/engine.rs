@@ -61,6 +61,8 @@ pub struct Flow {
     pub trusted: bool,
     /// Trusted and its "show traffic" switch is off: left out of every view and total.
     pub hidden: bool,
+    /// A known-safe service (index into `safe::SERVICES`), when that feature is on.
+    pub safe: Option<u8>,
     /// Bytes [out, in] already written to the daily history.
     hist: [u64; 2],
 }
@@ -82,6 +84,7 @@ impl Flow {
             new_bytes: false,
             trusted: false,
             hidden: false,
+            safe: None,
             hist: [0, 0],
         }
     }
@@ -104,6 +107,15 @@ fn own_root(own_exe: &str) -> String {
 pub enum TrustRule {
     Net((IpAddr, u8), bool),
     Domain(String, bool),
+}
+
+/// The known-safe service an address belongs to, if that feature and service are switched on.
+fn safe_pick(s: &crate::safe::Safe, cfg: &Config, dns: &HashMap<IpAddr, String>, ip: &IpAddr) -> Option<u8> {
+    if !cfg.safe_on {
+        return None;
+    }
+    let i = s.lookup(ip, dns.get(ip).map(String::as_str))?;
+    (!cfg.safe_off.iter().any(|o| o == crate::safe::SERVICES[i as usize].id)).then_some(i)
 }
 
 /// (trusted, hidden) for an address, using the IP rules and the name DNS gave it.
@@ -396,6 +408,8 @@ pub struct Engine {
     dropped: HashMap<(u32, IpAddr), u64>,
     /// Lists of known malware servers (intel.rs), swapped in whole after each download.
     pub intel: Arc<Intel>,
+    /// Known-safe services (Google, Microsoft 365, Windows Update, Apple).
+    pub safe: Arc<crate::safe::Safe>,
     intel_pending: Vec<IntelPending>,
     /// Defender scans and hashes per exe key; paths waiting for their scan.
     pub scans: HashMap<String, Scan>,
@@ -403,6 +417,9 @@ pub struct Engine {
     /// Camera / microphone use as Windows records it, and what is on right now.
     pub sensor_uses: Vec<Use>,
     sensor_on: HashSet<(&'static str, String)>,
+    /// When each program's camera / microphone pop-up was last shown (so a flickering
+    /// on/off doesn't pop up again and again).
+    sensor_popped: HashMap<(&'static str, String), u64>,
     /// Country and company of addresses (offline, geo.rs); swapped in whole after a download.
     pub geo: Arc<crate::geo::Geo>,
     /// This PC's country from Windows' region setting ("JP").
@@ -492,11 +509,13 @@ impl Engine {
             drops: Vec::new(),
             dropped: HashMap::new(),
             intel: Arc::new(Intel::default()),
+            safe: Arc::new(crate::safe::from_texts("", "", "", [0, 0], &HashMap::new())),
             intel_pending: Vec::new(),
             scans: HashMap::new(),
             scan_queue: Vec::new(),
             sensor_uses: Vec::new(),
             sensor_on: HashSet::new(),
+            sensor_popped: HashMap::new(),
             geo: Arc::new(crate::geo::Geo::default()),
             home: String::new(),
             away: None,
@@ -624,6 +643,7 @@ impl Engine {
             let mut f = Flow::new(now);
             f.trusted = trusted;
             f.hidden = hidden;
+            f.safe = safe_pick(&self.safe, &self.cfg, &self.dns, &key.ip);
             self.flows.insert(key, f);
         }
         self.flows.get_mut(&key).expect("just inserted")
@@ -1027,6 +1047,10 @@ impl Engine {
             if !(f.new_bytes || f.new_connect) {
                 continue;
             }
+            if f.new_connect && f.safe.is_none() {
+                // The DNS answer may have come after the flow was first seen.
+                f.safe = safe_pick(&self.safe, &self.cfg, &self.dns, &k.ip);
+            }
             if f.new_connect && !own.contains(&k.pid) {
                 let dom = self.dns.get(&k.ip).cloned().unwrap_or_default();
                 if let Some(h) = self.intel.ip(&k.ip).or_else(|| if dom.is_empty() { None } else { self.intel.domain(&dom) }) {
@@ -1087,7 +1111,13 @@ impl Engine {
                     }
                 }
                 if internet && !trusted {
+                    // A known-safe service only quiets "unusual destination" alerts, and only
+                    // for normal programs (never unsigned, Temp/Downloads, scripts, Windows tools).
+                    let quiet = f.safe.is_some() && !(v.shady() || v.sig == "pending" || v.script != Script::None);
                     for fd in detect::flow_rules(v, &facts) {
+                        if quiet && crate::safe::QUIET.contains(&fd.rule) {
+                            continue;
+                        }
                         found.push((k.pid, fd, dest.clone()));
                     }
                 }
@@ -1647,6 +1677,49 @@ impl Engine {
 
     // ---------------------------------------------------------------- threat lists, scans, camera
 
+    /// New known-safe lists.
+    pub fn set_safe(&mut self, s: Arc<crate::safe::Safe>) {
+        self.safe = s;
+        self.refresh_safe();
+    }
+
+    /// Call after the known-safe switches change.
+    pub fn refresh_safe(&mut self) {
+        for (k, f) in self.flows.iter_mut() {
+            f.safe = safe_pick(&self.safe, &self.cfg, &self.dns, &k.ip);
+        }
+    }
+
+    /// A new Kestryl release: one alert and pop-up per version.
+    pub fn announce_update(&mut self, now: u64, version: &str, notes: &str) {
+        if self.cfg.update_seen == version {
+            return;
+        }
+        self.cfg.update_seen = version.to_string();
+        self.dirty_cfg = true;
+        let first: String = notes
+            .lines()
+            .map(|l| l.trim().trim_start_matches(['#', '-', '*', ' ']).trim())
+            .filter(|l| !l.is_empty())
+            .take(4)
+            .collect::<Vec<_>>()
+            .join(" · ");
+        let first: String = first.chars().take(400).collect();
+        self.raise_sys(now, Finding {
+            rule: "update",
+            sev: 1,
+            title: format!("Kestryl {version} is available"),
+            why: format!("You have Kestryl {}. {}Update from this alert or from Settings → Updates. The update comes from Kestryl's GitHub releases.",
+                crate::update::current(), if first.is_empty() { String::new() } else { format!("What's new: {first} ") }),
+            group: version.to_string(),
+        }, "Kestryl");
+        if let Some(a) = self.alerts.iter().find(|a| a.rule == "update" && a.last == now).cloned() {
+            if !self.notify.iter().any(|x| x.id == a.id) {
+                self.notify.push(a);
+            }
+        }
+    }
+
     /// New threat lists: also checks every connection and name seen so far.
     pub fn set_intel(&mut self, intel: Arc<Intel>) {
         self.intel = intel;
@@ -1712,6 +1785,33 @@ impl Engine {
         self.scans.insert(exe.to_lowercase(), r);
     }
 
+    /// The user asked to be told every time this kind of sensor turns on.
+    fn sensor_notify(&self, kind: &str) -> bool {
+        if kind == "camera" { self.cfg.cam_notify } else { self.cfg.mic_notify }
+    }
+
+    /// Shows the camera / microphone alert just raised for `u` as a pop-up, whatever the
+    /// pop-up severity setting, when the user wants to hear about every use.
+    fn sensor_popup(&mut self, now: u64, u: &Use, name: &str) {
+        if !self.sensor_notify(u.kind) {
+            return;
+        }
+        let id = (u.kind, u.key());
+        if self.sensor_popped.get(&id).is_some_and(|t| *t + MIN > now) {
+            return;
+        }
+        let Some(a) = self.alerts.iter().find(|a| {
+            a.last == now && (a.rule == "cam_mic" || a.rule == "cam_mic_use") && (a.exe.eq_ignore_ascii_case(&u.app) || a.name == name)
+        }) else {
+            return; // muted
+        };
+        let a = a.clone();
+        self.sensor_popped.insert(id, now);
+        if !self.notify.iter().any(|x| x.id == a.id) {
+            self.notify.push(a);
+        }
+    }
+
     /// Camera and microphone use from the registry (every few seconds).
     pub fn on_sensors(&mut self, now: u64, uses: Vec<Use>) {
         for u in uses.iter().filter(|u| u.active()) {
@@ -1719,14 +1819,41 @@ impl Engine {
             if self.sensor_on.contains(&id) {
                 continue;
             }
-            if u.packaged {
+            let key = u.key();
+            if self.is_own_exe(&key) {
                 self.sensor_on.insert(id);
                 continue;
             }
-            let key = u.key();
-            let name = key.rsplit('\\').next().unwrap_or(&key).to_string();
-            if sensors::expected(&name) || self.is_trusted(&key) || self.is_own_exe(&key) {
+            let name = if u.packaged { sensors::label(u) } else { key.rsplit('\\').next().unwrap_or(&key).to_string() };
+            let what = if u.kind == "camera" { "camera" } else { "microphone" };
+            let page = if u.kind == "camera" { "Camera" } else { "Microphone" };
+            // Store apps, call / browser / recording programs and trusted programs: a notice, not
+            // a warning, and only when the user wants to hear about every use.
+            if u.packaged || sensors::expected(&name) || self.is_trusted(&key) {
                 self.sensor_on.insert(id);
+                if !self.sensor_notify(u.kind) {
+                    continue;
+                }
+                let (title, why) = match sensors::browser(&name) {
+                    Some(b) => (
+                        format!("{b} turned on your {what}"),
+                        format!("A website open in {b} is using the {what}. Windows only records the browser, not the tab: look for the {what} icon in the address bar or on the tab to see which site it is, and click it to stop or block it. If you did not just allow a site to use it, close that tab. Settings → Privacy & security → {page} lists every app that used it. You can turn these notices off in Kestryl Settings → Protection."),
+                    ),
+                    None => (
+                        format!("{name} turned on your {what}"),
+                        format!("Windows reports that {} started using the {what}. It is {}, so this is a notice rather than a warning. If you did not just start a call, a recording or the app's {what} feature, close it. Settings → Privacy & security → {page} lists every app that used it. You can turn these notices off in Kestryl Settings → Protection.",
+                            u.app, if u.packaged { "a Microsoft Store app" } else if self.is_trusted(&key) { "a program you trusted" } else { "a program people use for calls, meetings or recording" }),
+                    ),
+                };
+                let fd = Finding { rule: "cam_mic_use", sev: 1, title, why, group: u.kind.into() };
+                if u.packaged {
+                    let mut fd = fd;
+                    fd.group = format!("{}|{}", u.kind, u.key());
+                    self.raise_sys(now, fd, &name);
+                } else {
+                    self.raise_exe(now, &u.app, fd, Dest::default());
+                }
+                self.sensor_popup(now, u, &name);
                 continue;
             }
             let sig = self.sigs.get(&key).map(|s| s.status.clone());
@@ -1752,16 +1879,17 @@ impl Engine {
             if busy {
                 sev = (sev + 1).min(3);
             }
-            let what = if u.kind == "camera" { "camera" } else { "microphone" };
             self.raise_exe(now, &u.app, Finding {
                 rule: "cam_mic",
                 sev,
                 title: format!("{name} turned on your {what}"),
                 why: format!("Windows reports that {} started using the {what}. {reason}{} Remote-access trojans switch on the camera and microphone to spy. If you are not in a call or recording with it, end it and block it. Settings → Privacy & security → {} shows and controls which apps may use it.",
-                    u.app, if busy { format!(" It sent {} in the last minute.", fmt_bytes(sending)) } else { String::new() }, if u.kind == "camera" { "Camera" } else { "Microphone" }),
+                    u.app, if busy { format!(" It sent {} in the last minute.", fmt_bytes(sending)) } else { String::new() }, page),
                 group: u.kind.into(),
             }, Dest::default());
+            self.sensor_popup(now, u, &name);
         }
+        self.sensor_popped.retain(|_, t| *t + 10 * MIN > now);
         self.sensor_on.retain(|(k, a)| uses.iter().any(|u| u.active() && u.kind == *k && u.key() == *a));
         self.sensor_uses = uses;
     }
@@ -2184,6 +2312,7 @@ impl Engine {
                     "out": f.out, "in": f.inb, "rate_out": f.rate_out, "rate_in": f.rate_in,
                     "first": f.first, "last": f.last, "open": f.open, "connects": f.connects.len(),
                     "trusted": f.trusted,
+                    "safe": f.safe.map(|i| crate::safe::SERVICES[i as usize].name),
                 })
             })
             .collect();
@@ -2505,6 +2634,56 @@ mod tests {
     }
 
     #[test]
+    fn known_safe_services_quiet_only_unusual_destination_alerts() {
+        let goog = r#"{"prefixes":[{"ipv4Prefix":"142.250.0.0/15"},{"ipv4Prefix":"34.0.0.0/15"}]}"#;
+        let cloud = r#"{"prefixes":[{"ipv4Prefix":"34.0.0.0/16"}]}"#;
+        let run = |on: bool, pid: u32, ip: &str| {
+            let mut e = eng(); // pid 7: unsigned, in Downloads
+            add_proc(&mut e, 8, "app.exe", r"C:\Program Files\App\app.exe", "signed", "App Inc");
+            e.known.insert(r"c:\program files\app\app.exe".into());
+            e.known.insert(r"c:\users\a\downloads\invoice.exe".into());
+            e.cfg.safe_on = on;
+            e.set_safe(Arc::new(crate::safe::from_texts(goog, cloud, "", [0, 0], &HashMap::new())));
+            let ip: IpAddr = ip.parse().unwrap();
+            e.on_connect(1000, pid, Proto::Tcp, ip, 443);
+            e.on_packet(1200, pid, Proto::Tcp, ip, 443, 50005, 2 * MB, true);
+            e.tick(2000);
+            let rows = e.flow_rows(None);
+            (e.alerts.iter().map(|a| a.rule.clone()).collect::<Vec<_>>(), rows[0]["safe"].clone())
+        };
+        // A signed program sending to a bare Google address: tagged and quiet.
+        let (rules, tag) = run(true, 8, "142.250.1.1");
+        assert!(!rules.iter().any(|r| r == "bare_ip"), "{rules:?}");
+        assert_eq!(tag, "Google");
+        // Feature off: the same alert as before.
+        let (rules, tag) = run(false, 8, "142.250.1.1");
+        assert!(rules.iter().any(|r| r == "bare_ip"), "{rules:?}");
+        assert!(tag.is_null());
+        // A Google Cloud customer address is not Google's own.
+        let (rules, tag) = run(true, 8, "34.0.1.1");
+        assert!(rules.iter().any(|r| r == "bare_ip"), "{rules:?}");
+        assert!(tag.is_null());
+        // An unsigned program in Downloads gets no quiet, even to Google.
+        let (rules, _) = run(true, 7, "142.250.1.1");
+        assert!(rules.iter().any(|r| r == "bare_ip"), "{rules:?}");
+    }
+
+    #[test]
+    fn update_is_announced_once_per_version() {
+        let mut e = eng();
+        e.cfg.popup_min = 3;
+        e.announce_update(1000, "9.9.0", "### Fixed\n- Camera pop-ups.\n");
+        e.announce_update(5000, "9.9.0", "");
+        let a: Vec<&Alert> = e.alerts.iter().filter(|a| a.rule == "update").collect();
+        assert_eq!(a.len(), 1);
+        assert_eq!(a[0].title, "Kestryl 9.9.0 is available");
+        assert!(a[0].why.contains("Fixed · Camera pop-ups."), "{}", a[0].why);
+        assert_eq!(e.notify.len(), 1, "pops up whatever the pop-up level");
+        e.announce_update(9000, "9.9.1", "");
+        assert_eq!(e.alerts.iter().filter(|a| a.rule == "update").count(), 2);
+    }
+
+    #[test]
     fn own_exe_is_never_judged() {
         let mut e = eng();
         e.own_exe = r"c:\users\a\downloads\invoice.exe".into(); // pretend pid 7 is another Kestryl copy
@@ -2804,6 +2983,37 @@ mod tests {
         assert!(cam.iter().any(|a| a.sev == 1 && a.name == "chat.exe"));
         e.on_sensors(now + 3000, vec![u(r"C:\Users\a\AppData\Local\Temp\x.exe", 0)]);
         assert_eq!(e.alerts.iter().filter(|a| a.rule == "cam_mic").count(), 2); // still on: no repeat
+    }
+
+    #[test]
+    fn camera_notice_for_browsers_and_call_apps() {
+        let mut e = eng();
+        e.cfg.popup_min = 3; // the notice pops up whatever the pop-up level
+        let now = 10 * MIN;
+        let chrome = r"C:\Program Files\Google\Chrome\Application\chrome.exe";
+        let cam = |app: &str, packaged: bool, start: u64, stop: u64| Use { kind: "camera", app: app.into(), packaged, start, stop };
+        e.on_sensors(now, vec![cam(chrome, false, now - 2000, 0), cam("Microsoft.WindowsCamera_8wekyb3d8bbwe", true, now - 2000, 0)]);
+        let n: Vec<&Alert> = e.alerts.iter().filter(|a| a.rule == "cam_mic_use").collect();
+        assert_eq!(n.len(), 2, "{n:?}");
+        assert!(n.iter().any(|a| a.title == "Google Chrome turned on your camera" && a.sev == 1));
+        assert!(n.iter().any(|a| a.name == "WindowsCamera"));
+        assert_eq!(e.notify.len(), 2);
+        // Still on: nothing new. Off, then on again two minutes later: one more pop-up, same alert.
+        e.notify.clear();
+        e.on_sensors(now + 3000, vec![cam(chrome, false, now - 2000, 0)]);
+        assert!(e.notify.is_empty());
+        e.on_sensors(now + 6000, vec![cam(chrome, false, now - 2000, now + 5000)]);
+        e.on_sensors(now + 2 * MIN, vec![cam(chrome, false, now + 2 * MIN - 1000, 0)]);
+        assert_eq!(e.notify.len(), 1);
+        assert_eq!(e.alerts.iter().filter(|a| a.rule == "cam_mic_use").count(), 2);
+        // Microphone notices are off by default, and the camera ones can be turned off.
+        e.notify.clear();
+        e.on_sensors(now + 3 * MIN, vec![Use { kind: "microphone", app: chrome.into(), packaged: false, start: now + 3 * MIN - 1000, stop: 0 }]);
+        assert!(e.notify.is_empty());
+        e.cfg.cam_notify = false;
+        e.on_sensors(now + 20 * MIN, vec![]);
+        e.on_sensors(now + 21 * MIN, vec![cam(chrome, false, now + 21 * MIN - 1000, 0)]);
+        assert!(e.notify.is_empty());
     }
 
     #[test]

@@ -14,8 +14,10 @@ mod intel;
 mod ipinfo;
 mod origin;
 mod peek;
+mod safe;
 mod scan;
 mod sensors;
+mod update;
 mod util;
 
 use engine::{lock, Adapter, Alert, Engine, Shared, SigInfo};
@@ -240,6 +242,8 @@ fn settings(st: State<AppState>) -> Value {
         "abuse_key_set": !e.cfg.abuse_key.is_empty(), "intel": e.intel.lists, "intel_demo": e.intel.demo,
         "scans": e.scans.values().filter(|s| s.state != "running").count(),
         "advanced": e.cfg.advanced, "clip_guard": e.cfg.clip_guard, "geo": e.geo.info(), "home": e.home,
+        "cam_notify": e.cfg.cam_notify, "mic_notify": e.cfg.mic_notify,
+        "safe_on": e.cfg.safe_on, "safe_off": e.cfg.safe_off, "safe": e.safe.lists,
         "sim": e.sim,
     })
 }
@@ -259,6 +263,179 @@ fn set_clip_guard(st: State<AppState>, on: bool) -> Res<String> {
     e.cfg.clip_guard = on;
     e.dirty_cfg = true;
     Ok(if on { "Clipboard guard is on.".into() } else { "Clipboard guard is off.".into() })
+}
+
+// ------------------------------------------------------------------ known-safe services
+
+#[tauri::command]
+fn set_safe(st: State<AppState>, on: bool) -> Res<String> {
+    let mut e = lock(&st.eng);
+    e.cfg.safe_on = on;
+    e.dirty_cfg = true;
+    e.refresh_safe();
+    Ok(if on { "Known-safe services are on.".into() } else { "Known-safe services are off: every address is judged the same.".into() })
+}
+
+#[tauri::command]
+fn set_safe_service(st: State<AppState>, id: String, on: bool) -> Res<String> {
+    let i = safe::svc_index(&id).ok_or("Unknown service.")?;
+    let mut e = lock(&st.eng);
+    e.cfg.safe_off.retain(|x| *x != id);
+    if !on {
+        e.cfg.safe_off.push(id);
+    }
+    e.dirty_cfg = true;
+    e.refresh_safe();
+    let name = safe::SERVICES[i as usize].name;
+    Ok(if on { format!("{name} counts as a known-safe service.") } else { format!("{name} is treated like any other address now.") })
+}
+
+/// Every range (or name) of one known-safe service, for the viewer.
+#[tauri::command]
+fn safe_entries(st: State<AppState>, id: String) -> Res<Value> {
+    let i = safe::svc_index(&id).ok_or("Unknown service.")?;
+    let e = lock(&st.eng);
+    let s = &safe::SERVICES[i as usize];
+    Ok(json!({
+        "id": s.id, "name": s.name, "desc": s.desc, "source": s.source,
+        "entries": e.safe.entries(i),
+        "excluded": if s.id == "google" { e.safe.excluded() } else { Vec::new() },
+    }))
+}
+
+/// Settings → Test an address.
+#[tauri::command]
+fn safe_test(st: State<AppState>, ip: String) -> Res<Value> {
+    let addr: std::net::IpAddr = ip.trim().parse().map_err(|_| "Type an IP address, like 142.250.74.46.".to_string())?;
+    let e = lock(&st.eng);
+    let name = e.dns.get(&addr).cloned();
+    Ok(safe::explain(&e.safe, &addr, name.as_deref(), e.cfg.safe_on, &e.cfg.safe_off))
+}
+
+#[tauri::command]
+fn safe_refresh() -> Res<String> {
+    safe::REFRESH_NOW.store(true, Ordering::Relaxed);
+    Ok("Downloading the Google and Microsoft lists now.".into())
+}
+
+// ------------------------------------------------------------------ updates
+
+/// The signing public key is set in tauri.conf.json (until then: no in-app install).
+fn update_key_set(app: &AppHandle) -> bool {
+    app.config().plugins.0.get("updater").and_then(|u| u.get("pubkey")).and_then(Value::as_str).is_some_and(|k| !k.trim().is_empty())
+}
+
+fn update_json(app: &AppHandle, eng: &Shared) -> Value {
+    let s = update::STATE.lock().map(|s| s.clone()).unwrap_or_default();
+    let installed = update::installed();
+    let signed = s.available.as_ref().is_some_and(|r| r.signed);
+    json!({
+        "current": update::current(), "auto": lock(eng).cfg.update_check,
+        "available": s.available, "checked": s.checked, "checking": s.checking, "err": s.err, "installing": s.installing,
+        "installed": installed, "can_install": installed && signed && update_key_set(app),
+        "page": s.available.as_ref().map(|r| r.url.clone()).unwrap_or_else(|| update::PAGE.to_string()),
+    })
+}
+
+#[tauri::command]
+fn update_state(app: AppHandle, st: State<AppState>) -> Value {
+    update_json(&app, &st.eng)
+}
+
+#[tauri::command]
+async fn update_check_now(app: AppHandle, st: State<'_, AppState>) -> Res<Value> {
+    let eng = st.eng.clone();
+    let rel = bg(|| Ok(update::run_check())).await?;
+    if let Some(r) = rel {
+        lock(&eng).announce_update(now_ms(), &r.version, &r.notes);
+    }
+    let v = update_json(&app, &eng);
+    if !v["err"].as_str().unwrap_or("").is_empty() {
+        return Err(format!("Could not check: {}.", v["err"].as_str().unwrap_or("")));
+    }
+    Ok(v)
+}
+
+#[tauri::command]
+fn set_update_check(st: State<AppState>, on: bool) -> Res<String> {
+    let mut e = lock(&st.eng);
+    e.cfg.update_check = on;
+    e.dirty_cfg = true;
+    Ok(if on { "Kestryl checks GitHub for a new version once a day.".into() } else { "Automatic update checks are off. Use Check now any time.".into() })
+}
+
+/// Opens the release page in the browser (only Kestryl's own GitHub releases).
+#[tauri::command]
+fn update_open_page() -> Res<()> {
+    let url = update::STATE
+        .lock()
+        .ok()
+        .and_then(|s| s.available.as_ref().map(|r| r.url.clone()))
+        .filter(|u| u.starts_with(&format!("https://github.com/{}/", update::REPO)))
+        .unwrap_or_else(|| update::PAGE.to_string());
+    let mut cmd = std::process::Command::new(windows_dir().join("explorer.exe"));
+    cmd.arg(url);
+    own_spawn(&mut cmd).map_err(|e| e.to_string())
+}
+
+/// Downloads the signed setup, checks its signature against the key built into Kestryl, stops
+/// monitoring cleanly and runs it. The installer restarts Kestryl when it is done.
+#[tauri::command]
+async fn update_install(app: AppHandle, st: State<'_, AppState>) -> Res<String> {
+    use tauri_plugin_updater::UpdaterExt;
+    if !update::installed() {
+        return Err("This is the portable Kestryl.exe: download the new version from the release page.".into());
+    }
+    if !update_key_set(&app) {
+        return Err("This copy of Kestryl has no update key built in yet: download the new version from the release page.".into());
+    }
+    let set = |on: bool| {
+        if let Ok(mut s) = update::STATE.lock() {
+            s.installing = on;
+        }
+    };
+    set(true);
+    let eng = st.eng.clone();
+    let r: Res<String> = async {
+        let updater = app
+            .updater_builder()
+            .on_before_exit(move || shutdown(&eng))
+            .build()
+            .map_err(|e| format!("The updater could not start ({e})."))?;
+        let up = updater
+            .check()
+            .await
+            .map_err(|e| format!("Could not read the update information on GitHub ({e})."))?
+            .ok_or("No newer signed update was found on GitHub.")?;
+        let bytes = up.download(|_, _| {}, || {}).await.map_err(|e| format!("The download failed ({e})."))?;
+        // Checks the signature first; refuses anything not signed with Kestryl's key.
+        up.install(bytes).map_err(|e| format!("The update was not installed ({e})."))?;
+        Ok(format!("Installing Kestryl {}…", up.version))
+    }
+    .await;
+    if r.is_err() {
+        set(false);
+    }
+    r
+}
+
+/// Pop up every time the camera (kind "camera") or microphone turns on.
+#[tauri::command]
+fn set_sensor_notify(st: State<AppState>, kind: String, on: bool) -> Res<String> {
+    let mut e = lock(&st.eng);
+    let what = match kind.as_str() {
+        "camera" => {
+            e.cfg.cam_notify = on;
+            "camera"
+        }
+        "microphone" => {
+            e.cfg.mic_notify = on;
+            "microphone"
+        }
+        _ => return Err("Unknown sensor.".into()),
+    };
+    e.dirty_cfg = true;
+    Ok(if on { format!("Kestryl now tells you every time an app turns on the {what}.") } else { format!("Only unusual {what} use is reported now.") })
 }
 
 /// "Where my data went" for a day: per country and per company.
@@ -479,6 +656,15 @@ async fn decrypt_start(st: State<'_, AppState>, exe: String, name: String, minut
         "Kestryl",
     );
     Ok(json!(info))
+}
+
+/// Stops monitoring cleanly and saves everything: on quit, and before an update installs (the
+/// updater ends the process itself, so the normal exit event never comes).
+fn shutdown(eng: &Shared) {
+    end_session(eng, "Kestryl was closed");
+    collect::stop_etw();
+    collect::stop_files();
+    persist(eng);
 }
 
 fn end_session(eng: &Shared, why: &str) -> Option<decrypt::Info> {
@@ -1110,6 +1296,39 @@ fn intel_loop(eng: Shared) {
     }
 }
 
+/// Known-safe services: the saved copies at once, fresh downloads once a day or on request.
+fn safe_loop(eng: Shared) {
+    let mut errs = HashMap::new();
+    lock(&eng).set_safe(Arc::new(safe::build(&errs)));
+    std::thread::sleep(Duration::from_secs(25));
+    loop {
+        let force = safe::REFRESH_NOW.swap(false, Ordering::Relaxed);
+        if safe::refresh(force, &mut errs) || force {
+            let fresh = safe::build(&errs);
+            lock(&eng).set_safe(Arc::new(fresh));
+        }
+        for _ in 0..3600 {
+            std::thread::sleep(Duration::from_secs(1));
+            if safe::REFRESH_NOW.load(Ordering::Relaxed) {
+                break;
+            }
+        }
+    }
+}
+
+/// New Kestryl versions: a minute after start, then once a day (when switched on).
+fn update_loop(eng: Shared) {
+    std::thread::sleep(Duration::from_secs(60));
+    loop {
+        if lock(&eng).cfg.update_check {
+            if let Some(r) = update::run_check() {
+                lock(&eng).announce_update(now_ms(), &r.version, &r.notes);
+            }
+        }
+        std::thread::sleep(Duration::from_secs(24 * 3600));
+    }
+}
+
 /// Country and company data: the saved copy at once, a fresh download once a month.
 fn geo_loop(eng: Shared) {
     if lock(&eng).sim {
@@ -1358,6 +1577,8 @@ pub fn run() {
         // The demo may run next to the real monitor; the real one stays single.
         builder = builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| show_main(app)));
     }
+    // Signed in-app updates (see update.rs); does nothing until Update now is used.
+    builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
     builder
         .manage(AppState { eng: eng.clone() })
         .invoke_handler(tauri::generate_handler![
@@ -1407,6 +1628,17 @@ pub fn run() {
             open_virustotal,
             set_view,
             set_clip_guard,
+            set_sensor_notify,
+            set_safe,
+            set_safe_service,
+            safe_entries,
+            safe_test,
+            safe_refresh,
+            update_state,
+            update_check_now,
+            set_update_check,
+            update_open_page,
+            update_install,
             data_map,
             geo_refresh,
             analytics_list,
@@ -1578,6 +1810,10 @@ pub fn run() {
                 let e = eng.clone();
                 std::thread::spawn(move || intel_loop(e));
                 let e = eng.clone();
+                std::thread::spawn(move || safe_loop(e));
+                let e = eng.clone();
+                std::thread::spawn(move || update_loop(e));
+                let e = eng.clone();
                 std::thread::spawn(move || sensor_loop(e));
                 let e = eng.clone();
                 std::thread::spawn(move || away_loop(e));
@@ -1605,10 +1841,7 @@ pub fn run() {
         .expect("error while building Kestryl")
         .run(move |_app, ev| {
             if let tauri::RunEvent::Exit = ev {
-                end_session(&eng_exit, "Kestryl was closed");
-                collect::stop_etw();
-                collect::stop_files();
-                persist(&eng_exit);
+                shutdown(&eng_exit);
             }
         });
 }

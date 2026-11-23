@@ -67,6 +67,8 @@ const RULES = {
   malware_hash: 'Known malware files',
   defender_found: 'Found by Microsoft Defender',
   cam_mic: 'Camera and microphone use',
+  cam_mic_use: 'Camera or microphone turned on',
+  update: 'New Kestryl version',
   away_upload: 'Data sent while you were away',
   clipboard_swap: 'Copied wallet or bank numbers swapped',
   decrypt_session: 'HTTPS decryption started or ended',
@@ -241,6 +243,8 @@ async function trustDest(target, site, btn) {
 }
 const trustBtn = f => (f.trusted ? '' : `<button class="btn sm" data-a="trust" data-v="${esc(f.domain || f.ip)}" data-site="${f.domain ? 1 : ''}" title="Trust ${esc(f.domain ? 'this site and its subdomains' : f.ip)}: hide its traffic, never alert">Trust</button>`);
 const trustTag = f => (f.trusted ? ' <span class="tag ok">trusted</span>' : '');
+// One of Google's, Microsoft's or Apple's own services (Settings → Known-safe services).
+const safeTag = f => (f.safe ? ` <span class="tag" data-pop="${esc(f.safe)}'s own service, from the list ${esc(f.safe)} publishes (Settings → Known-safe services). Alerts that only say a destination looks unusual stay quiet for normal programs; upload and stealer alerts do not.">${esc(f.safe)}</span>` : '');
 const isIpTarget = t => /^\d{1,3}(\.\d{1,3}){3}(\/\d+)?$/.test(t) || t.includes(':');
 
 const trust = (exeKey, on, btn) => act('trust', { exeKey, on }, btn).then(() => loadSettings());
@@ -528,7 +532,7 @@ function flowRows(flows, withProc) {
       (where ? `<div class="sub">${esc(where)}</div>` : '');
     return `<tr class="click ${f.open ? '' : 'dim'} ${state.connSel === flowKey(f) ? 'sel' : ''}" data-fk="${esc(flowKey(f))}">
       ${withProc ? `<td>${sw(f.name)}<span class="pn"><span class="pname">${esc(f.name)}</span> <span class="sub">${f.pid}</span></span></td>` : ''}
-      <td class="wrap">${dest}${trustTag(f)}</td>
+      <td class="wrap">${dest}${trustTag(f)}${safeTag(f)}</td>
       <td class="num">${f.port}${f.service ? ` <span class="sub">${esc(f.service)}</span>` : ''}${f.inb ? ' <span class="sub">on this PC</span>' : ''}</td>
       ${withProc ? `<td class="num">${f.proto.toUpperCase()}</td>` : ''}
       <td class="sub">${esc(f.enc)}</td>
@@ -694,10 +698,12 @@ async function renderConnections() {
   const sc = $('#conn-scope').dataset.value;
   const dir = $('#conn-dir').dataset.value;
   const openOnly = $('#open-only').checked;
+  const hideSafe = $('#hide-safe').checked;
   const rows = flows.filter(f =>
     (sc === 'all' || (sc === 'internet' ? f.scope === 'internet' : f.scope !== 'internet')) &&
     (dir === 'all' || (dir === 'in') === !!f.inb) &&
     (!openOnly || f.open) &&
+    (!hideSafe || !f.safe) &&
     (!q || f.name.toLowerCase().includes(q) || f.domain.includes(q) || f.ip.includes(q) || String(f.port) === q));
   $('#conn-sum').textContent = `${rows.length} of ${flows.length}`;
   state.connSub = `${flows.filter(f => f.open).length} open, ${flows.length} in the last 15 minutes`;
@@ -716,7 +722,7 @@ function renderConnInfo(f) {
   setHtml(box, `<div class="ph">Connection<button class="close-x" data-a="close" title="Close" style="margin-left:auto">&#xE711;</button></div>
     <div class="ipn">${esc(f.ip)}</div>
     ${f.domain ? `<div class="dom">${esc(f.domain)}</div>` : '<div class="dom muted">No name looked up</div>'}
-    <div class="tags">${f.inb ? `<span class="tag ${inet ? 'med' : ''}">incoming</span>` : ''}<span class="tag">${esc(inet ? 'internet' : f.scope === 'lan' ? 'local network' : f.scope)}</span>${f.trusted ? '<span class="tag ok">trusted</span>' : ''}</div>
+    <div class="tags">${f.inb ? `<span class="tag ${inet ? 'med' : ''}">incoming</span>` : ''}<span class="tag">${esc(inet ? 'internet' : f.scope === 'lan' ? 'local network' : f.scope)}</span>${f.trusted ? '<span class="tag ok">trusted</span>' : ''}${f.safe ? `<span class="tag">${esc(f.safe)} service</span>` : ''}</div>
     <dl class="kv">
       <dt>Program</dt><dd>${sw(f.name)}<span class="pn"><b>${esc(f.name)}</b> <span class="sub">pid ${f.pid}</span></span></dd>
       ${f.cc ? `<dt>Country</dt><dd>${esc(ccName(f.cc))}</dd>` : ''}
@@ -740,7 +746,7 @@ $('#conn-info').onclick = e => {
   if (e.target.closest('[data-a="close"]')) { state.connSel = null; return renderConnections(); }
   onFlowAction(e);
 };
-['#conn-q', '#conn-scope', '#conn-dir', '#open-only'].forEach(s => ($(s).oninput = renderConnections));
+['#conn-q', '#conn-scope', '#conn-dir', '#open-only', '#hide-safe'].forEach(s => ($(s).oninput = renderConnections));
 // Segmented filters keep their value in data-value and fire "input" like a select would.
 document.addEventListener('click', e => {
   const b = e.target.closest('.seg[data-value] > [data-v]');
@@ -800,7 +806,8 @@ function renderAlerts() {
       <dt>Alert type</dt><dd>${esc(RULES[a.rule] || a.rule)}</dd>
     </dl>
     <div class="actions">
-      ${a.system ? '<button class="btn" data-t="status">Open Status</button>' : ''}
+      ${a.rule === 'update' ? `${(state.update || {}).can_install ? '<button class="btn primary" data-t="upd-install">Update now</button>' : ''}<button class="btn" data-t="upd-page">${(state.update || {}).can_install ? 'Release page' : 'Open download page'}</button>` : ''}
+      ${a.system && a.rule !== 'update' ? '<button class="btn" data-t="status">Open Status</button>' : ''}
       ${a.exe ? '<button class="btn dangerf" data-t="app">Block app</button>' : ''}
       ${a.domain ? `<button class="btn danger" data-t="dom">Block ${esc(a.domain)}</button>` : ''}
       ${a.ip ? `<button class="btn danger adv" data-t="ip">Block ${esc(a.ip)}</button>` : ''}
@@ -814,10 +821,16 @@ function renderAlerts() {
       <button class="btn" data-t="dismiss">Dismiss</button>
       ${same > 1 ? `<button class="btn" data-t="dismiss-rule">Dismiss all ${same} like this</button>` : ''}
     </div>`;
+  // The list and the detail panel scroll on their own (not #alert-list): keep where the user
+  // was, and keep the detail position only while the same alert stays open.
   const box = $('#alert-list');
-  const top = box.scrollTop;
+  const oldList = box.querySelector('.alist');
+  const oldDet = box.querySelector('.adet');
+  const listTop = oldList ? oldList.scrollTop : 0;
+  const detTop = oldDet && +oldDet.dataset.id === a.id ? oldDet.scrollTop : 0;
   box.innerHTML = `<div class="agrid"><div class="panel alist">${list}</div><div class="panel adet" data-id="${a.id}">${detail}</div></div>`;
-  box.scrollTop = top;
+  box.querySelector('.alist').scrollTop = listTop;
+  box.querySelector('.adet').scrollTop = detTop;
 }
 
 function openAlert(id) {
@@ -857,6 +870,8 @@ $('#alert-list').onclick = async e => {
   }
   if (t === 'status') switchTab('status');
   if (t === 'decrypt') switchTab('decrypt');
+  if (t === 'upd-install') updateInstall(el);
+  if (t === 'upd-page') invoke('update_open_page').catch(err => flash(String(err), true));
 };
 $('#alert-filter').onclick = e => {
   const b = e.target.closest('button');
@@ -1193,11 +1208,42 @@ async function loadAnalytics() {
 
 async function loadSettings() {
   state.settings = await invoke('settings');
+  state.update = await invoke('update_state').catch(() => state.update);
   if (state.tab === 'settings') renderSettings();
 }
 
-const SNAV = [['set-alerts', 'Alerts'], ['set-protect', 'Protection'], ['set-intel', 'Threat lists'], ['set-geo', 'Country data'], ['set-theme', 'Theme'], ['set-tdest', 'Trusted IPs and domains'],
-  ['set-trust', 'Trusted programs'], ['set-mute', 'Muted alert types'], ['set-see', 'What Kestryl can see'], ['set-diag', 'Diagnostics', 1]];
+const SNAV = [['set-alerts', 'Alerts'], ['set-protect', 'Protection'], ['set-intel', 'Threat lists'], ['set-safe', 'Known-safe services'], ['set-geo', 'Country data'], ['set-theme', 'Theme'], ['set-tdest', 'Trusted IPs and domains'],
+  ['set-trust', 'Trusted programs'], ['set-mute', 'Muted alert types'], ['set-update', 'Updates'], ['set-see', 'What Kestryl can see'], ['set-diag', 'Diagnostics', 1]];
+
+// Settings → Updates and the update alert: download, check the signature, install, restart.
+async function updateInstall(btn) {
+  const u = state.update || {};
+  const v = u.available ? u.available.version : 'the new version';
+  if (!(await ask(`Install Kestryl ${v}?`, 'Kestryl downloads the setup from its GitHub releases, checks that it is signed with Kestryl\'s key, then closes, installs and starts again. Monitoring pauses for about a minute. Windows may ask for administrator permission.', 'Update now'))) return;
+  if (await act('update_install', {}, btn)) setTimeout(loadSettings, 3000);
+}
+
+// Settings → Known-safe services → View: every range (or name) of one service.
+async function safeSheet(id) {
+  $('#sheet').hidden = false;
+  $('#sheet-body').innerHTML = '<p class="muted">Loading…</p>';
+  let r;
+  try { r = await invoke('safe_entries', { id }); } catch (e) { $('#sheet-body').innerHTML = `<p class="err-text">${esc(e)}</p>`; return; }
+  const list = xs => xs.map(x => `<div data-v="${esc(x.toLowerCase())}">${esc(x)}</div>`).join('');
+  $('#sheet-body').innerHTML = `<h2>${esc(r.name)}</h2>
+    <p class="sd" style="margin-top:8px">${esc(r.desc)}</p>
+    <p class="note">Source: <span class="mono">${esc(r.source)}</span></p>
+    <label class="search" style="margin:10px 0"><i class="ic">&#xE721;</i><input id="safe-q" type="search" placeholder="Filter" spellcheck="false"></label>
+    <div class="sub">${r.entries.length.toLocaleString()} ${id === 'windows' ? 'names' : 'address ranges'}</div>
+    <div class="mono" id="safe-list" style="margin-top:6px;line-height:19px">${list(r.entries) || '<span class="muted">Not downloaded yet. Use Update lists now in Settings.</span>'}</div>
+    ${r.excluded.length ? `<details class="help" style="margin-top:14px"><summary>Left out: ${r.excluded.length.toLocaleString()} Google Cloud customer ranges</summary>
+      <p class="note">Google rents these to anyone, so they are never counted as safe, even though they are inside Google's address space.</p>
+      <div class="mono" id="safe-excl" style="line-height:19px">${list(r.excluded)}</div></details>` : ''}`;
+  $('#safe-q').oninput = e => {
+    const q = e.target.value.trim().toLowerCase();
+    $$('#safe-list [data-v], #safe-excl [data-v]').forEach(x => (x.hidden = !!q && !x.dataset.v.includes(q)));
+  };
+}
 
 function renderSettings() {
   const s = state.settings;
@@ -1240,6 +1286,10 @@ function renderSettings() {
       ], H)}
       <div class="srow"><div><b>Clipboard guard</b><small>Warns when a program swaps a wallet address or bank account number you copied</small></div>
         <label class="check"><input type="checkbox" id="s-clip" ${s.clip_guard ? 'checked' : ''}></label></div>
+      <div class="srow"><div><b>Camera turned on</b><small>Pops up every time any app or browser tab turns on the camera, not only unusual programs</small></div>
+        <label class="check"><input type="checkbox" id="s-cam" ${s.cam_notify ? 'checked' : ''}></label></div>
+      <div class="srow"><div><b>Microphone turned on</b><small>The same for the microphone. Calls and voice chat turn it on often, so this is off at first</small></div>
+        <label class="check"><input type="checkbox" id="s-mic" ${s.mic_notify ? 'checked' : ''}></label></div>
       <div class="srow"><div><b>File monitoring</b><small>Which programs open passwords, cookies, wallets, keys and documents · ${fileState}</small></div>
         <label class="check"><input type="checkbox" id="s-files" ${s.file_watch ? 'checked' : ''}></label></div>
       <div class="srow"><div><b>Start with Windows</b><small>Runs Kestryl hidden in the tray at sign-in, with administrator rights${state.autostart == null ? '' : state.autostart ? ' · On' : ' · Off'}</small></div>
@@ -1260,6 +1310,28 @@ function renderSettings() {
         <div class="ctl"><input type="password" id="s-key" style="width:240px" placeholder="${s.abuse_key_set ? '••••••••••••' : 'Paste key'}" spellcheck="false" autocomplete="off">
           <button class="btn" id="s-key-save">Save</button>${s.abuse_key_set ? '<button class="btn" id="s-key-del">Remove</button>' : ''}</div></div>
       <div class="sfoot"><button class="btn" id="s-intel-go">Update lists now</button></div>
+    </div>
+
+    <div class="panel sec" id="set-safe">
+      <div class="sech">Known-safe services</div>
+      <p class="sd">Addresses that belong to Google's, Microsoft's and Apple's own services, from the lists these companies publish. Connections to them are tagged, and alerts that only say a destination looks unusual (check-ins on a timer, bare IP addresses, uncommon ports) stay quiet for normal programs.</p>
+      ${help('s-safe', [
+        '<b>Still reported, even to these services:</b> large uploads, programs opening your passwords or cookies and then sending data, programs sending email or using FTP by themselves, file-sharing and paste sites, and known malware servers. Password stealers upload to Google Drive and OneDrive too.',
+        '<b>Never quieted:</b> unsigned programs, programs running from Temp or Downloads, scripts and Windows tools.',
+        '<b>Left out on purpose:</b> Google Cloud and Azure customer servers (anyone can rent one, and malware control servers often sit there), and networks that carry everyone\'s content, such as Cloudflare, Akamai and Amazon CloudFront.',
+        'Google\'s and Microsoft\'s lists are downloaded once a day straight from Google and Microsoft. Nothing about this PC is sent; the request is the same from every copy of Kestryl. Windows Update and Apple are built in.',
+      ], H)}
+      <div class="srow"><div><b>Use known-safe services</b><small>Off: every address is judged the same, as before</small></div>
+        <label class="check"><input type="checkbox" id="s-safe" ${s.safe_on ? 'checked' : ''}></label></div>
+      ${(s.safe || []).length ? `<table class="grid"><thead><tr><th>Service</th><th class="r">Entries</th><th>Updated</th><th>On</th><th></th></tr></thead><tbody>${s.safe.map(l => `<tr class="${s.safe_on ? '' : 'dim'}">
+          <td>${esc(l.name)}<div class="sub">${esc(l.desc)}</div>${l.err ? `<div class="sub err-text">${esc(l.err)}</div>` : ''}</td>
+          <td class="r num">${l.n.toLocaleString()}${l.excluded ? `<div class="sub">${l.excluded.toLocaleString()} left out</div>` : ''}</td>
+          <td class="muted">${l.t ? ago(l.t) : l.id === 'google' || l.id === 'microsoft' ? 'not yet' : 'built in'}</td>
+          <td><label class="check"><input type="checkbox" data-safe-svc="${esc(l.id)}" ${(s.safe_off || []).includes(l.id) ? '' : 'checked'} ${s.safe_on ? '' : 'disabled'}></label></td>
+          <td class="r"><button class="btn sm" data-safe-view="${esc(l.id)}">View</button></td></tr>`).join('')}</tbody></table>` : ''}
+      <div class="addrow"><input type="text" id="s-safe-ip" style="width:240px" placeholder="Test an address, like 142.250.74.46" spellcheck="false"><button class="btn" id="s-safe-test">Test</button></div>
+      <p class="note" id="s-safe-res" hidden></p>
+      <div class="sfoot"><button class="btn" id="s-safe-go">Update lists now</button></div>
     </div>
 
     <div class="panel sec" id="set-geo">
@@ -1310,6 +1382,30 @@ function renderSettings() {
       ${s.muted.length ? `<table class="grid"><tbody>${s.muted.map(m => `<tr><td>${esc(RULES[m] || m)}</td><td class="r"><button class="btn sm" data-mute="${esc(m)}">Un-mute</button></td></tr>`).join('')}</tbody></table>` : '<div class="empty">None.</div>'}
     </div>
 
+    <div class="panel sec" id="set-update">
+      <div class="sech">Updates</div>
+      ${(() => {
+        const u = state.update || {};
+        const r = u.available;
+        return `<p class="sd">This is Kestryl ${esc(u.current || '')}. Kestryl asks its GitHub releases page once a day whether a newer version is out, and tells you. Nothing is installed until you click Update now.</p>
+      ${help('s-update', [
+        'The check is one request to GitHub\'s public API. GitHub sees that this PC asked (its IP address), nothing else.',
+        '<b>Update now</b> downloads the new setup from GitHub and installs it only if it is signed with Kestryl\'s update key, which is built into this copy. A changed or swapped file is refused. Kestryl then closes, the installer runs (Windows may ask for administrator permission) and Kestryl starts again.',
+        'The portable Kestryl.exe cannot replace itself: it shows the new version and opens the download page instead.',
+      ], H)}
+      <div class="srow"><div><b>Check for new versions</b><small>Once a day, from github.com/${esc('HacanAle/Kestryl')}</small></div>
+        <label class="check"><input type="checkbox" id="s-upd" ${u.auto ? 'checked' : ''}></label></div>
+      <div class="status-line"><span>Installed: <b>${esc(u.current || '')}</b>${u.installed ? '' : ' <span class="sub">(portable)</span>'}</span>
+        <span>Newest: <b>${r ? esc(r.version) : u.checked ? 'you have it' : 'not checked yet'}</b></span>
+        ${u.checked ? `<span>Checked: <b>${ago(u.checked)}</b></span>` : ''}</div>
+      ${u.err ? `<p class="note err-text">${esc(u.err)}</p>` : ''}
+      ${r && r.notes ? `<div class="note" style="white-space:pre-line;max-height:220px;overflow:auto">${esc(r.notes)}</div>` : ''}
+      ${r && !u.can_install ? `<p class="note">${u.installed ? 'This release cannot be installed from inside Kestryl yet (it is not signed for in-app updates). Download it from the release page.' : 'Download the new portable exe or the setup from the release page.'}</p>` : ''}
+      <div class="sfoot"><button class="btn" id="s-upd-check" ${u.checking ? 'disabled' : ''}>Check now</button>
+        ${r ? (u.can_install ? `<button class="btn primary" id="s-upd-go" ${u.installing ? 'disabled' : ''}>${u.installing ? 'Installing…' : 'Update now'}</button>` : '') + '<button class="btn" id="s-upd-page">Open release page</button>' : ''}</div>`;
+      })()}
+    </div>
+
     <div class="panel sec" id="set-see">
       <div class="sech">What Kestryl can and cannot see</div>
       <p class="sd" style="line-height:19px">Kestryl sees every program's connections in both directions: where they go, the port, how many bytes each way, how regularly, and which names were looked up, and checks them against lists of known malware servers.
@@ -1350,6 +1446,37 @@ function renderSettings() {
   scroller.onscroll();
   $('#s-files').onchange = e => act('set_file_watch', { on: e.target.checked }).then(loadSettings);
   $('#s-clip').onchange = e => act('set_clip_guard', { on: e.target.checked }).then(loadSettings);
+  $('#s-cam').onchange = e => act('set_sensor_notify', { kind: 'camera', on: e.target.checked }).then(loadSettings);
+  $('#s-mic').onchange = e => act('set_sensor_notify', { kind: 'microphone', on: e.target.checked }).then(loadSettings);
+  $('#s-safe').onchange = e => act('set_safe', { on: e.target.checked }).then(loadSettings);
+  $$('#settings [data-safe-svc]').forEach(c => (c.onchange = () => act('set_safe_service', { id: c.dataset.safeSvc, on: c.checked }).then(loadSettings)));
+  $$('#settings [data-safe-view]').forEach(b => (b.onclick = () => safeSheet(b.dataset.safeView)));
+  const safeTest = async () => {
+    const ip = $('#s-safe-ip').value.trim();
+    if (!ip) return;
+    const out = $('#s-safe-res');
+    try {
+      const r = await invoke('safe_test', { ip });
+      out.textContent = r.text;
+      out.className = 'note' + (r.safe ? ' ok-text' : '');
+    } catch (err) { out.textContent = String(err); out.className = 'note err-text'; }
+    out.hidden = false;
+  };
+  $('#s-safe-test').onclick = safeTest;
+  $('#s-safe-ip').onkeydown = e => { if (e.key === 'Enter') safeTest(); };
+  $('#s-safe-go').onclick = e => act('safe_refresh', {}, e.currentTarget).then(() => setTimeout(loadSettings, 8000));
+  $('#s-upd').onchange = e => act('set_update_check', { on: e.target.checked }).then(loadSettings);
+  $('#s-upd-check').onclick = async e => {
+    const b = e.currentTarget;
+    b.disabled = true;
+    try {
+      state.update = await invoke('update_check_now');
+      flash(state.update.available ? `Kestryl ${state.update.available.version} is available.` : 'You have the newest version.');
+    } catch (err) { flash(String(err), true); }
+    loadSettings();
+  };
+  if ($('#s-upd-go')) $('#s-upd-go').onclick = e => updateInstall(e.currentTarget);
+  if ($('#s-upd-page')) $('#s-upd-page').onclick = () => invoke('update_open_page').catch(err => flash(String(err), true));
   $('#s-geo-go').onclick = e => act('geo_refresh', {}, e.currentTarget).then(() => setTimeout(loadSettings, 15000));
   $('#s-save').onclick = e => act('save_settings', { uploadMb: +$('#s-up').value || 20, popups: $('#s-pop').checked, popupMin: +$('#s-min').value }, e.currentTarget).then(loadSettings);
   $('#s-auto').onclick = async () => {
