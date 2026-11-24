@@ -74,8 +74,8 @@ A security tool has full access to your PC, so you shouldn't have to take it on 
 
 | File | For |
 |---|---|
-| **`Kestryl_1.8.0_x64-setup.exe`** | Most people. Installs to *Program Files* (recommended: only administrators can change it there), adds a Start menu entry and an uninstaller. |
-| `Kestryl_1.8.0_x64_portable.exe` | No install. Run it from a folder of your choice, for example a USB stick or for a quick look. |
+| **`Kestryl_1.8.1_x64-setup.exe`** | Most people. Installs to *Program Files* (recommended: only administrators can change it there), adds a Start menu entry and an uninstaller. |
+| `Kestryl_1.8.1_x64_portable.exe` | No install. Run it from a folder of your choice, for example a USB stick or for a quick look. |
 | `SHA256SUMS.txt` | Checksums of both, to verify your download. |
 | Source code (zip / tar.gz) | Added by GitHub to every release. Build it yourself with [docs/BUILDING.md](docs/BUILDING.md). |
 
