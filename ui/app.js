@@ -93,7 +93,10 @@ const ccName = (() => {
     return (typeof WORLD !== 'undefined' && WORLD.c[cc] && WORLD.c[cc].n) || cc;
   };
 })();
-const HOST_NOTE = 'Runs servers for thousands of other sites and apps, so its name says whose computer it is, not whose site. The site name tells you who you really talked to.';
+// Every country on the world map, [code, name] sorted by name: the home-country picker.
+const countryList = () => (typeof WORLD === 'undefined' ? [] : Object.keys(WORLD.c))
+  .map(cc => [cc, ccName(cc)]).sort((a, b) => a[1].localeCompare(b[1]));
+const HOST_NOTE ='Runs servers for thousands of other sites and apps, so its name says whose computer it is, not whose site. The site name tells you who you really talked to.';
 // "Japan · Google" for a connection (empty for the local network).
 const placeOf = f => [f.cc ? ccName(f.cc) : '', f.org ? f.org + (f.host ? ' (hosting)' : '') : ''].filter(Boolean).join(' · ');
 const analyticsTag = f => (f.analytics ? ' <span class="tag" data-pop="Usage data (telemetry) sent to the maker of the program. It can be turned off on the Blocking tab, under Analytics and telemetry.">analytics</span>' : '');
@@ -1339,9 +1342,11 @@ function renderSettings() {
       <p class="sd">The Places page and the country next to each connection come from DB-IP's free database. It is downloaded once a month (about 12 MB) and used on this PC only: the addresses your programs talk to are never sent anywhere to be looked up.${geo.demo ? ' Simulation: made-up places.' : ''}</p>
       <div class="status-line"><span>Status: <b>${geo.ready ? 'ready' : geo.demo ? 'demo' : 'not downloaded yet'}</b></span>
         ${geo.ranges ? `<span>Address ranges: <b class="num">${geo.ranges.toLocaleString()}</b></span>` : ''}${geo.companies ? `<span>Companies: <b class="num">${geo.companies.toLocaleString()}</b></span>` : ''}
-        ${geo.country_t ? `<span>Updated: <b>${ago(geo.country_t)}</b></span>` : ''}${s.home ? `<span>Home country: <b>${esc(ccName(s.home))}</b></span>` : ''}</div>
+        ${geo.country_t ? `<span>Updated: <b>${ago(geo.country_t)}</b></span>` : ''}</div>
       ${geo.err ? `<p class="note err-text">${esc(geo.err)}</p>` : ''}
-      <p class="note">${esc(geo.attribution || '')}. Home country is taken from Windows (Settings → Time &amp; language → Region).</p>
+      <div class="srow"><div><b>Home country</b><small>Places and "data leaving your country" compare against this</small></div>
+        <div class="ctl"><select id="s-home" style="max-width:260px"><option value="">From Windows${s.home_win ? ` (${esc(ccName(s.home_win))})` : ''}</option>${countryList().map(([cc, n]) => `<option value="${cc}" ${s.home_set === cc ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select></div></div>
+      <p class="note">${esc(geo.attribution || '')}. "From Windows" uses Settings → Time &amp; language → Region.</p>
       <div class="sfoot"><button class="btn" id="s-geo-go">Download now</button></div>
     </div>
 
@@ -1485,6 +1490,7 @@ function renderSettings() {
   $('#s-kofi').onclick = () => invoke('open_support').catch(err => flash(String(err), true));
   if ($('#s-upd-page')) $('#s-upd-page').onclick = () => invoke('update_open_page').catch(err => flash(String(err), true));
   $('#s-geo-go').onclick = e => act('geo_refresh', {}, e.currentTarget).then(() => setTimeout(loadSettings, 15000));
+  $('#s-home').onchange = e => act('set_home', { country: e.target.value }).then(loadSettings);
   $('#s-save').onclick = e => act('save_settings', { uploadMb: +$('#s-up').value || 20, popups: $('#s-pop').checked, popupMin: +$('#s-min').value }, e.currentTarget).then(loadSettings);
   $('#s-auto').onclick = async () => {
     if (state.autostart == null) return;
@@ -2489,17 +2495,18 @@ function renderPeek(r) {
 
 // ---------------------------------------------------------------- theme
 
-// Kestryl is everyone's theme until they pick another one in Settings (config.rs DEFAULT_THEME).
-const THEMES = [['kestryl', 'Kestryl', ['ks']], ['dark', 'Dark', ['dk']], ['light', 'Light', ['lt']], ['system', 'Follow Windows', ['lt', 'dk']]];
+// Follow Windows is everyone's theme until they pick another one in Settings (config.rs DEFAULT_THEME).
+const THEMES = [['system', 'Follow Windows', ['lt', 'dk']], ['kestryl', 'Kestryl', ['ks']], ['dark', 'Dark', ['dk']], ['light', 'Light', ['lt']]];
 const lightQ = matchMedia('(prefers-color-scheme: light)');
 function applyTheme(t) {
-  state.theme = ['dark', 'light', 'kestryl', 'system'].includes(t) ? t : 'kestryl';
+  state.theme = ['dark', 'light', 'kestryl', 'system'].includes(t) ? t : 'system';
   const light = state.theme === 'light' || (state.theme === 'system' && lightQ.matches);
   document.documentElement.dataset.theme = state.theme === 'kestryl' ? 'kestryl' : light ? 'light' : 'dark';
+  try { localStorage.setItem('kestryl-theme', document.documentElement.dataset.theme); } catch (e) { /* storage blocked */ }
 }
 lightQ.addEventListener('change', () => { applyTheme(state.theme); if (state.tab === 'status') renderStatus(); });
-invoke('settings').then(s => { state.settings = s; applyTheme(s.theme); applyView(s.advanced); }).catch(() => applyTheme('kestryl'));
-applyTheme('kestryl');
+invoke('settings').then(s => { state.settings = s; applyTheme(s.theme); applyView(s.advanced); }).catch(() => applyTheme('system'));
+applyTheme('system');
 
 // ---------------------------------------------------------------- simple / advanced view
 

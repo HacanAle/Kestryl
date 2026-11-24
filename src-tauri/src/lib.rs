@@ -242,6 +242,7 @@ fn settings(st: State<AppState>) -> Value {
         "abuse_key_set": !e.cfg.abuse_key.is_empty(), "intel": e.intel.lists, "intel_demo": e.intel.demo,
         "scans": e.scans.values().filter(|s| s.state != "running").count(),
         "advanced": e.cfg.advanced, "clip_guard": e.cfg.clip_guard, "geo": e.geo.info(), "home": e.home,
+        "home_set": e.cfg.home_country, "home_win": geo::home_country(),
         "cam_notify": e.cfg.cam_notify, "mic_notify": e.cfg.mic_notify,
         "safe_on": e.cfg.safe_on, "safe_off": e.cfg.safe_off, "safe": e.safe.lists,
         "sim": e.sim,
@@ -895,6 +896,21 @@ fn set_theme(app: AppHandle, st: State<AppState>, theme: String) -> Res<()> {
     e.dirty_cfg = true;
     let _ = app.emit_to("toast", "theme", theme);
     Ok(())
+}
+
+/// Home country for Places and "data leaving your country": a two-letter code, or "" for
+/// Windows' region setting.
+#[tauri::command]
+fn set_home(st: State<AppState>, country: String) -> Res<String> {
+    let cc = country.trim().to_ascii_uppercase();
+    if !cc.is_empty() && !geo::valid_cc(&cc) {
+        return Err("Unknown country.".into());
+    }
+    let mut e = lock(&st.eng);
+    e.home = geo::home_for(&cc);
+    e.cfg.home_country = cc;
+    e.dirty_cfg = true;
+    Ok("Saved.".into())
 }
 
 #[tauri::command]
@@ -1566,7 +1582,7 @@ pub fn run() {
     let mut engine = Engine::new(cfg, config::load_alerts());
     engine.elevated = is_elevated();
     engine.sim = simulate;
-    engine.home = geo::home_country();
+    engine.home = geo::home_for(&engine.cfg.home_country);
     if !simulate {
         if let Some(d) = history::load(&engine.today.day) {
             engine.today = d; // continue today's numbers after a restart
@@ -1610,6 +1626,7 @@ pub fn run() {
             mute,
             save_settings,
             set_theme,
+            set_home,
             block_app,
             block_ip,
             block_domain,

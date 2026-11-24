@@ -100,7 +100,7 @@ Every program using the network, live.
 
 A world map of where each day's data was sent, shaded by amount, with your own country outlined. Beside it are the countries and the companies running the servers, each with its sites and programs. Hosting companies (Amazon, Cloudflare, Akamai…) are marked, because their name says whose computer it is, not whose site.
 
-The map shows where the **servers** are, not where the company is from. It works offline from DB-IP's free country and ASN database, downloaded once a month (about 12 MB). No address you talk to is ever sent anywhere to look it up. Pick any of the last 30 days. Your home country comes from Windows' region setting.
+The map shows where the **servers** are, not where the company is from. It works offline from DB-IP's free country and ASN database, downloaded once a month (about 12 MB). No address you talk to is ever sent anywhere to look it up. Pick any of the last 30 days. Your home country comes from Windows' region setting; to use another one, pick it in Settings → Country and company data → Home country.
 
 ## Connections
 
@@ -243,7 +243,7 @@ Shows what **one** chosen program sends inside its encrypted connections: method
 - **Threat lists**: what is loaded and when it was updated, **Update lists now**, and an optional free [abuse.ch](https://auth.abuse.ch/) key that adds ThreatFox.
 - **Known-safe services**: Google, Microsoft 365, Windows Update and Defender, and Apple. Connections to their own services are tagged and the "unusual destination" alerts (timer check-ins, bare IP addresses, uncommon ports) stay quiet for normal programs; everything else still alerts, and unsigned programs, programs in Temp or Downloads, scripts and Windows tools are never quieted. Switch the feature or single services off, **View** every range, **Test** an address, **Update lists now**. Google Cloud customer ranges are left out on purpose: anyone can rent a server there.
 - **Country data**: status of the DB-IP database and **Update now**.
-- **Theme**: Kestryl (the default), Dark, Light or Follow Windows.
+- **Theme**: Follow Windows (the default: light or dark like Windows), Kestryl, Dark or Light.
 - **Trusted programs** and **Trusted IPs and domains**.
 - **Updates**: your version, the newest one and what's new, **Check now**, **Update now**, and the daily check on or off.
 - **Diagnostics**: mode, events received, dropped events, errors. Useful in bug reports.

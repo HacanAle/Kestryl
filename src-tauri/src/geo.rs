@@ -318,6 +318,16 @@ pub fn demo() -> Geo {
     g
 }
 
+/// A plausible two-letter country code ("JP").
+pub fn valid_cc(cc: &str) -> bool {
+    cc.len() == 2 && cc.bytes().all(|b| b.is_ascii_uppercase())
+}
+
+/// The home country: the one picked in Settings, else Windows' region setting.
+pub fn home_for(chosen: &str) -> String {
+    if valid_cc(chosen) { chosen.to_string() } else { home_country() }
+}
+
 /// The user's own country from Windows' region setting ("JP"), to tell home from abroad.
 #[cfg(windows)]
 pub fn home_country() -> String {

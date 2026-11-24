@@ -21,9 +21,12 @@ pub struct Config {
     pub learning_until: u64,
     /// UI colours: kestryl | dark | light | system (older palettes mist/slate/sky/sage read as dark).
     pub theme: String,
-    /// The user picked `theme` in Settings. Until then Kestryl's own theme is used, also for
-    /// configs written by older versions (which saved "dark" without anyone choosing it).
+    /// The user picked `theme` in Settings. Until then the app follows Windows' light/dark
+    /// setting, also for configs written by older versions (which saved a theme without anyone
+    /// choosing it).
     pub theme_chosen: bool,
+    /// Home country picked in Settings ("JP"); empty = Windows' region setting.
+    pub home_country: String,
     /// Free abuse.ch Auth-Key: adds the ThreatFox list of control servers and malware hashes.
     pub abuse_key: String,
     /// Trusted IPs, ranges and domains: never alerted, hidden unless `show`.
@@ -120,6 +123,7 @@ impl Default for Config {
             learning_until: 0,
             theme: DEFAULT_THEME.into(),
             theme_chosen: false,
+            home_country: String::new(),
             abuse_key: String::new(),
             trusted_dests: vec![],
             file_watch: true,
@@ -147,8 +151,8 @@ pub fn dir() -> PathBuf {
     local_appdata().join("Kestryl")
 }
 
-/// The theme everyone starts with, until they pick one in Settings.
-pub const DEFAULT_THEME: &str = "kestryl";
+/// The theme everyone starts with, until they pick one in Settings: Windows' light/dark mode.
+pub const DEFAULT_THEME: &str = "system";
 
 /// Returns the config and whether this is the first run.
 pub fn load() -> (Config, bool) {
@@ -202,14 +206,20 @@ mod tests {
     use super::*;
 
     #[test]
-    fn kestryl_theme_until_the_user_picks_one() {
-        assert_eq!(Config::default().theme, "kestryl");
-        // Older versions saved "dark" for everyone, chosen or not.
-        assert_eq!(parse(r#"{"theme":"dark","upload_mb":30}"#).theme, "kestryl");
+    fn follows_windows_until_the_user_picks_a_theme() {
+        assert_eq!(Config::default().theme, "system");
+        // Older versions saved a theme for everyone, chosen or not.
+        assert_eq!(parse(r#"{"theme":"kestryl","upload_mb":30}"#).theme, "system");
         assert_eq!(parse(r#"{"theme":"dark","upload_mb":30}"#).upload_mb, 30);
         // A theme picked in Settings stays.
         assert_eq!(parse(r#"{"theme":"dark","theme_chosen":true}"#).theme, "dark");
-        assert_eq!(parse(r#"{"theme":"system","theme_chosen":true}"#).theme, "system");
-        assert_eq!(parse("not json").theme, "kestryl");
+        assert_eq!(parse(r#"{"theme":"kestryl","theme_chosen":true}"#).theme, "kestryl");
+        assert_eq!(parse("not json").theme, "system");
+    }
+
+    #[test]
+    fn home_country_defaults_to_windows() {
+        assert_eq!(Config::default().home_country, "");
+        assert_eq!(parse(r#"{"home_country":"JP"}"#).home_country, "JP");
     }
 }

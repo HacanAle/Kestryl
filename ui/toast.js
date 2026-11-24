@@ -14,11 +14,12 @@ function arm(ms = 15000) {
   timer = setTimeout(() => (hover ? arm(3000) : win.hide()), ms);
 }
 
-// kestryl (default) | dark | light | system.
+// system (default: Windows' light/dark mode) | kestryl | dark | light.
 function applyTheme(t) {
-  if (!['dark', 'light', 'kestryl', 'system'].includes(t)) t = 'kestryl';
+  if (!['dark', 'light', 'kestryl', 'system'].includes(t)) t = 'system';
   const light = t === 'light' || (t === 'system' && matchMedia('(prefers-color-scheme: light)').matches);
   document.documentElement.dataset.theme = t === 'kestryl' ? 'kestryl' : light ? 'light' : 'dark';
+  try { localStorage.setItem('kestryl-theme', document.documentElement.dataset.theme); } catch (e) { /* storage blocked */ }
 }
 
 function render(p) {

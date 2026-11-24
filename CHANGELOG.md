@@ -2,10 +2,21 @@
 
 All notable changes to Kestryl are listed here. Versions follow [Semantic Versioning](https://semver.org).
 
-## [Unreleased]
+## [1.8.4] - 2026-11-25
+
+### New
+- **Pick your home country.** Settings → Country and company data → **Home country**. Places and "data leaving your country" compare against it. **From Windows** (the default) keeps using Windows' region setting as before; pick a country when that setting isn't where you live, for example on a PC set up abroad or with a region chosen only for the Store.
+
+### Changed
+- **The theme follows Windows by default.** New installs, and everyone who never picked a theme in Settings, now get light or dark to match Windows (Settings → Personalization → Colors), and the app switches along when Windows does. Why: an app that ignores the system's light/dark choice feels out of place. The Kestryl theme is still in Settings → Theme, and a theme you picked yourself is kept.
+- The window no longer flashes the wrong colours while it opens: it starts in the theme it showed last time.
 
 ### Fixed
-- **Fewer antivirus false alarms.** A few scanners on VirusTotal flagged the 1.8.3 setup as a backdoor (Meterpreter) because of how Kestryl starts PowerShell and because the program carried malware names as plain text. Kestryl now hands its PowerShell checks over as plain text (no `-EncodedCommand`, no base64, no `-ExecutionPolicy Bypass`), and the suspicious-port descriptions and demo malware names moved into the compressed detection data (`ui/rules.json`). Nothing changes in what Kestryl detects.
+- **Fewer antivirus false alarms.** Some scanners on VirusTotal flagged the 1.8.3 setup as a backdoor (Huorong and Rising: "Meterpreter", Kaspersky: "Qhost"). Kestryl did nothing wrong, but two things in the program looked like a malware loader:
+  - It started PowerShell with `-ExecutionPolicy Bypass -EncodedCommand` and a base64 loader, which is exactly how attack tools launch their scripts. Kestryl now hands its PowerShell checks over as plain text: no base64, no `-EncodedCommand`, no `-ExecutionPolicy Bypass` (none of it was needed; Windows' own modules load under every policy).
+  - The program carried malware names as plain text (the suspicious-port notes, a mail-stealer note and the demo's made-up threats). These moved into the detection data that ships compressed inside the app (`ui/rules.json`), like the password-file list already did.
+  
+  Nothing changes in what Kestryl detects or how it looks. In our test on VirusTotal the setup went from 3 detections to 1 (Huorong).
 
 ## [1.8.3] - 2026-11-24
 
