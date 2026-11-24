@@ -2,6 +2,11 @@
 
 All notable changes to Kestryl are listed here. Versions follow [Semantic Versioning](https://semver.org).
 
+## [Unreleased]
+
+### Fixed
+- **Fewer antivirus false alarms.** A few scanners on VirusTotal flagged the 1.8.3 setup as a backdoor (Meterpreter) because of how Kestryl starts PowerShell and because the program carried malware names as plain text. Kestryl now hands its PowerShell checks over as plain text (no `-EncodedCommand`, no base64, no `-ExecutionPolicy Bypass`), and the suspicious-port descriptions and demo malware names moved into the compressed detection data (`ui/rules.json`). Nothing changes in what Kestryl detects.
+
 ## [1.8.3] - 2026-11-24
 
 ### Fixed

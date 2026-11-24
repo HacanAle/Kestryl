@@ -414,9 +414,18 @@ pub fn own_spawn(cmd: &mut std::process::Command) -> std::io::Result<()> {
     Ok(())
 }
 
-/// Starts a hidden PowerShell running `script`. Windows caps a command line at 32,767
-/// characters, so a long script goes through stdin to a short bootstrap instead (never via a
-/// temp file: Kestryl runs elevated, and a file could be swapped before PowerShell reads it).
+/// Reads the script from stdin as UTF-8 bytes and runs it. Not `-Command -`: that decodes stdin
+/// with the console code page, whose best-fit mapping turns quote look-alikes (U+2019) into a
+/// real ' and would break `ps_quote`.
+const PS_BOOT: &str = "$m = New-Object IO.MemoryStream; [Console]::OpenStandardInput().CopyTo($m); . ([ScriptBlock]::Create([Text.Encoding]::UTF8.GetString($m.ToArray())))";
+
+/// Starts a hidden PowerShell running `script`. The script goes as plain UTF-8 text through
+/// stdin to a short bootstrap: no length limit (a command line stops at 32,767 characters) and
+/// never a temp file (Kestryl runs elevated, and a file could be swapped before PowerShell reads
+/// it). No -EncodedCommand / base64 and no -ExecutionPolicy Bypass: that combination is what
+/// malware loaders use, so antivirus heuristics flagged Kestryl as a backdoor. Neither is
+/// needed: `-Command` text is not subject to the execution policy, and Windows' own modules
+/// load under every policy.
 fn ps_spawn(script: &str) -> std::io::Result<std::process::Child> {
     use std::process::Stdio;
     // Modules only from Windows' own folders (the user's Documents\WindowsPowerShell\Modules
@@ -425,28 +434,21 @@ fn ps_spawn(script: &str) -> std::io::Result<std::process::Child> {
     let wrapped = format!(
         "$env:PSModulePath = (Join-Path $PSHOME 'Modules') + ';' + (Join-Path ([Environment]::GetFolderPath('ProgramFiles')) 'WindowsPowerShell\\Modules')\n$env:SystemRoot = [Environment]::GetFolderPath('Windows'); $env:windir = $env:SystemRoot\n$env:ProgramFiles = [Environment]::GetFolderPath('ProgramFiles'); $env:ProgramData = [Environment]::GetFolderPath('CommonApplicationData')\n$ProgressPreference='SilentlyContinue'\n[Console]::OutputEncoding = New-Object System.Text.UTF8Encoding $false\ntry {{\n$ErrorActionPreference='Stop'\n{script}\n}} catch {{ [Console]::Out.Write('ERR:' + $_.Exception.Message); exit 1 }}"
     );
-    let utf16 = |t: &str| -> Vec<u8> { t.encode_utf16().flat_map(|u| u.to_le_bytes()).collect() };
-    let enc = b64(&utf16(&wrapped));
     let win = windows_dir();
     let ps_home = win.join(r"System32\WindowsPowerShell\v1.0");
     let mut cmd = std::process::Command::new(ps_home.join("powershell.exe"));
     cmd.env("SystemRoot", &win).env("windir", &win).env("PSModulePath", ps_home.join("Modules"));
-    cmd.args(["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass"]).stdout(Stdio::piped()).stderr(Stdio::piped());
+    cmd.args(["-NoProfile", "-NonInteractive", "-Command", PS_BOOT])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
     hide_window(&mut cmd);
-    if enc.len() < 28_000 {
-        cmd.args(["-EncodedCommand", &enc]).stdin(Stdio::null());
-        let child = cmd.spawn()?;
-        own_child_started(child.id());
-        return Ok(child);
-    }
-    const BOOT: &str = "$s = [Text.Encoding]::Unicode.GetString([Convert]::FromBase64String([Console]::In.ReadToEnd().Trim())); . ([ScriptBlock]::Create($s))";
-    cmd.args(["-EncodedCommand", &b64(&utf16(BOOT))]).stdin(Stdio::piped());
     let mut child = cmd.spawn()?;
     own_child_started(child.id());
     if let Some(mut stdin) = child.stdin.take() {
         std::thread::spawn(move || {
             use std::io::Write;
-            let _ = stdin.write_all(enc.as_bytes()); // closed when dropped, ending ReadToEnd
+            let _ = stdin.write_all(wrapped.as_bytes()); // closed when dropped, ending CopyTo
         });
     }
     Ok(child)
@@ -635,5 +637,19 @@ mod tests {
         let out = run_ps(&format!("$o = @({}); 'n=' + $o.Count; $o[0]", ps_quote(name))).unwrap();
         assert!(!out.lines().any(|l| l == "PWNED"), "injected code ran: {out}");
         assert_eq!(out, format!("n=1\n{name}").replace('\n', "\r\n"), "round trip failed");
+    }
+
+    /// Scripts longer than a command line, non-ASCII text, errors and exit codes all survive the
+    /// stdin bootstrap.
+    #[test]
+    #[ignore]
+    fn live_ps_long_script_and_errors() {
+        let filler = format!("# {}\n", "x".repeat(100)).repeat(400); // ~41k characters
+        let out = run_ps(&format!("{filler}'Caf\u{e9} \u{65e5}\u{672c} ' + (1 + 2)")).unwrap();
+        assert_eq!(out, "Caf\u{e9} \u{65e5}\u{672c} 3");
+        let err = run_ps("throw 'boom'").unwrap_err();
+        assert_eq!(err, "boom");
+        let cmd = run_ps("(Get-NetFirewallProfile | Measure-Object).Count").unwrap();
+        assert_eq!(cmd, "3", "NetSecurity module did not load");
     }
 }

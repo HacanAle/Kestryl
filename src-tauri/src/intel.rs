@@ -344,8 +344,13 @@ pub fn refresh(key: &str, force: bool, errs: &mut HashMap<&'static str, String>)
 /// The --simulate demo: made-up entries matching the demo's fake malware.
 pub fn demo() -> Intel {
     let mut i = Intel { demo: true, ..Default::default() };
-    i.load(1, "198.51.100.7,AsyncRAT control server (demo)\n");
-    i.load(5, r#"{"query_status":"ok","data":[{"ioc":"api.storage-sync.net","ioc_type":"domain","threat_type":"botnet_cc","malware_printable":"Lumma Stealer (demo)"}]}"#);
+    // The made-up family names come from ui/rules.json (no malware names as plain text in the exe).
+    let names = &crate::detect::rules().demo_intel;
+    let name = |k: usize| names.get(k).map(String::as_str).unwrap_or_default();
+    i.load(1, &format!("{}\n", name(0)));
+    let tf = serde_json::json!({ "query_status": "ok", "data": [{ "ioc": "api.storage-sync.net", "ioc_type": "domain",
+        "threat_type": "botnet_cc", "malware_printable": name(1) }] });
+    i.load(5, &tf.to_string());
     for (k, s) in SOURCES.iter().enumerate() {
         i.lists.push(ListInfo { id: s.id, name: s.name, desc: s.desc, n: if k == 1 || k == 5 { 1 } else { 0 }, t: now_ms(), err: String::new() });
     }

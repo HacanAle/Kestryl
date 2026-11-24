@@ -133,18 +133,9 @@ pub fn dest_kind(domain: &str) -> Option<DestKind> {
     DESTS.iter().find(|(d, _)| domain_is(domain, d)).map(|(_, k)| *k)
 }
 
+/// Ports malware is known for, with why. The table lives in ui/rules.json (see `Rules`).
 pub fn bad_port(port: u16) -> Option<&'static str> {
-    match port {
-        4444 => Some("4444 is the default port of Metasploit reverse shells"),
-        1337 | 31337 => Some("it is a classic backdoor port"),
-        6667 | 6697 => Some("it is IRC, an old favourite for botnet control channels"),
-        9001 | 9030 => Some("it is a Tor relay port"),
-        9050 | 9150 => Some("it is a Tor proxy port"),
-        3333 | 14433 | 14444 | 45560 | 45700 => Some("it is a common crypto-mining pool port"),
-        1604 => Some("it is the DarkComet remote-access trojan port"),
-        5552 => Some("it is the njRAT remote-access trojan port"),
-        _ => None,
-    }
+    rules().ports.iter().find(|(p, _)| p.contains(&port)).map(|(_, why)| why.as_str())
 }
 
 pub fn is_common_tcp(port: u16) -> bool {
@@ -305,7 +296,7 @@ pub fn flow_rules(p: &ProcView, x: &FlowFacts) -> Vec<Finding> {
                 "mail_out",
                 sev,
                 format!("{name} is sending email by itself"),
-                format!("{name} connected to the mail server {dest}:{}. Normally only your email app does that. Some password stealers (Agent Tesla, Snake Keylogger) email what they steal to the attacker this way. Backup and scanner programs sometimes send report emails.", x.port),
+                format!("{name} connected to the mail server {dest}:{}. Normally only your email app does that. {} Backup and scanner programs sometimes send report emails.", x.port, rules().mail_why),
                 group.clone(),
             ));
         } else if FTP_PORTS.contains(&x.port) && !is_ftp_client(name) && p.script != Script::Lolbin {
@@ -607,9 +598,10 @@ pub fn inbound_rules(p: &ProcView, x: &FlowFacts) -> Vec<Finding> {
 
 // ---------------------------------------------------------------- files stealers go for
 
-/// Which files stealers go for, and who may open them. Loaded from ui/rules.json (compressed
-/// into kestryl.exe like the UI): kept out of the program as plain text because antivirus
-/// scanners take a program carrying that list for a stealer.
+/// Which files stealers go for, and who may open them; ports and family names malware is known
+/// for. Loaded from ui/rules.json (compressed into kestryl.exe like the UI): kept out of the
+/// program as plain text because antivirus scanners take a program carrying that list for a
+/// stealer or a backdoor.
 #[derive(serde::Deserialize, Default, Debug)]
 pub struct Rules {
     #[serde(default)]
@@ -620,6 +612,15 @@ pub struct Rules {
     pub samples: Vec<(String, String)>,
     #[serde(default)]
     pub demo_mail: String,
+    /// (ports, why) for the `bad_port` alert.
+    #[serde(default)]
+    pub ports: Vec<(Vec<u16>, String)>,
+    /// One sentence for the `mail_out` alert: which stealers send email.
+    #[serde(default)]
+    pub mail_why: String,
+    /// The --simulate demo's threat-list entries: [IP list line, ThreatFox family].
+    #[serde(default)]
+    pub demo_intel: Vec<String>,
 }
 
 #[derive(serde::Deserialize, Default, Debug)]
