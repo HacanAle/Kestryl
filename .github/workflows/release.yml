@@ -1,6 +1,12 @@
 # Builds the setup and the portable exe on a clean Windows runner from the tagged commit,
 # writes SHA256SUMS.txt, attests build provenance for every file and publishes the release.
 # Start it by pushing a tag like v1.7.9 (the version in tauri.conf.json must match).
+#
+# In-app updates: when the repository secret TAURI_SIGNING_PRIVATE_KEY (and
+# TAURI_SIGNING_PRIVATE_KEY_PASSWORD) is set, the setup is also signed with it and latest.json
+# is published, which installed copies of Kestryl read to offer "Update now". The matching
+# public key goes in src-tauri/tauri.conf.json → plugins.updater.pubkey. Without the secret
+# the release is built exactly as before, without those two files.
 name: Release
 
 on:
@@ -45,6 +51,16 @@ jobs:
           if ("v$v" -ne $env:TAG) { throw "tauri.conf.json says $v, but the tag is $env:TAG" }
           "VERSION=$v" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
+      - name: Update signing
+        shell: pwsh
+        env:
+          KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:KEY)) { "No TAURI_SIGNING_PRIVATE_KEY secret: building without in-app update files."; exit 0 }
+          $conf = Get-Content src-tauri/tauri.conf.json -Raw | ConvertFrom-Json
+          if ([string]::IsNullOrWhiteSpace($conf.plugins.updater.pubkey)) { throw "The TAURI_SIGNING_PRIVATE_KEY secret is set, but plugins.updater.pubkey in src-tauri/tauri.conf.json is empty. Put the matching public key there." }
+          "SIGN_UPDATES=1" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
       - name: Install the Tauri CLI
         run: npm ci
 
@@ -53,7 +69,20 @@ jobs:
         run: cargo test --lib
 
       - name: Build setup and exe
-        run: npx tauri build
+        shell: pwsh
+        env:
+          KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          KEY_PW: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          if ($env:SIGN_UPDATES -eq '1') {
+            $env:TAURI_SIGNING_PRIVATE_KEY = $env:KEY
+            $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = $env:KEY_PW
+            '{"bundle":{"createUpdaterArtifacts":true}}' | Set-Content -Path updater.conf.json -Encoding ascii
+            npx tauri build --config updater.conf.json
+          } else {
+            npx tauri build
+          }
+          if ($LASTEXITCODE -ne 0) { throw "tauri build failed with exit code $LASTEXITCODE" }
 
       - name: Collect files and checksums
         shell: pwsh
@@ -61,6 +90,9 @@ jobs:
           New-Item -ItemType Directory -Path dist | Out-Null
           Copy-Item "src-tauri/target/release/bundle/nsis/Kestryl_${env:VERSION}_x64-setup.exe" dist/
           Copy-Item "src-tauri/target/release/Kestryl.exe" "dist/Kestryl_${env:VERSION}_x64_portable.exe"
+          if ($env:SIGN_UPDATES -eq '1') {
+            Copy-Item "src-tauri/target/release/bundle/nsis/Kestryl_${env:VERSION}_x64-setup.exe.sig" dist/
+          }
           Push-Location dist
           Get-ChildItem -Filter *.exe | Sort-Object Name | ForEach-Object {
             '{0}  {1}' -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower(), $_.Name
@@ -81,6 +113,7 @@ jobs:
           $text = (Get-Content CHANGELOG.md -Raw) -replace "`r`n", "`n"
           $m = [regex]::Match($text, "(?ms)^## \[$([regex]::Escape($env:VERSION))\][^\n]*\n(.*?)(?=^## \[|^\[\d)")
           $body = if ($m.Success) { $m.Groups[1].Value.Trim() } else { "Kestryl $env:VERSION" }
+          [IO.File]::WriteAllText("$PWD/body.md", $body, [Text.UTF8Encoding]::new($false))
           $notes = @"
           $body
 
@@ -98,6 +131,25 @@ jobs:
           "@
           ($notes -split "`n" | ForEach-Object { $_ -replace '^          ', '' }) -join "`n" | Set-Content -Path notes.md -Encoding utf8
           Get-Content notes.md
+
+      - name: Update manifest (latest.json)
+        if: env.SIGN_UPDATES == '1'
+        shell: pwsh
+        run: |
+          $setup = "Kestryl_${env:VERSION}_x64-setup.exe"
+          $manifest = [ordered]@{
+            version   = $env:VERSION
+            notes     = (Get-Content body.md -Raw)
+            pub_date  = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+            platforms = [ordered]@{
+              'windows-x86_64' = [ordered]@{
+                signature = (Get-Content "dist/$setup.sig" -Raw).Trim()
+                url       = "https://github.com/$env:GITHUB_REPOSITORY/releases/download/$env:TAG/$setup"
+              }
+            }
+          }
+          [IO.File]::WriteAllText("$PWD/dist/latest.json", ($manifest | ConvertTo-Json -Depth 5), [Text.UTF8Encoding]::new($false))
+          Get-Content dist/latest.json
 
       - name: Publish the release
         shell: pwsh
