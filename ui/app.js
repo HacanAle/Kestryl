@@ -296,8 +296,8 @@ function renderTop() {
   drawChart(s.history);
   const full = s.mode === 'full';
   const mode = full
-    ? `<span><span class="dot"></span>Full monitoring</span>`
-    : `<span><span class="dot warn"></span>${s.mode === 'limited' ? 'Limited mode' : 'Starting'}</span>` +
+    ? `<span title="Full monitoring"><span class="dot"></span><span class="ml">Full monitoring</span></span>`
+    : `<span title="${s.mode === 'limited' ? 'Limited mode' : 'Starting'}"><span class="dot warn"></span><span class="ml">${s.mode === 'limited' ? 'Limited mode' : 'Starting'}</span></span>` +
       (s.elevated ? '' : `<button class="btn sm" id="elevate">Restart as administrator</button>`);
   if ($('#mode').dataset.html !== mode) {
     $('#mode').dataset.html = mode;
@@ -1305,7 +1305,7 @@ function renderSettings() {
         '<b>ThreatFox</b> (abuse.ch) is the biggest list of remote-access trojan and stealer servers (AsyncRAT, Remcos, Quasar, Lumma…) and of malware file fingerprints. It needs a free key: sign in at auth.abuse.ch, open Optional → API keys, create one and paste it here.',
         'Kestryl also asks Microsoft Defender to scan unsigned programs and programs in temp or download folders when they first show up. That scan only reports; Kestryl never deletes files.',
       ], H)}
-      ${lists.length ? `<table class="grid"><thead><tr><th>List</th><th class="r">Entries</th><th>Updated</th><th></th></tr></thead><tbody>${lists.map(l => `<tr><td>${esc(l.name)}<div class="sub">${esc(l.desc)}</div></td><td class="r">${l.n.toLocaleString()}</td><td class="muted">${l.t ? ago(l.t) : 'never'}</td><td class="sub wrap">${esc(l.err)}</td></tr>`).join('')}</tbody></table>` : '<div class="empty">Loading the lists…</div>'}
+      ${lists.length ? `<table class="grid"><thead><tr><th>List</th><th class="r">Entries</th><th>Updated</th><th></th></tr></thead><tbody>${lists.map(l => `<tr><td class="wrap">${esc(l.name)}<div class="sub">${esc(l.desc)}</div></td><td class="r">${l.n.toLocaleString()}</td><td class="muted">${l.t ? ago(l.t) : 'never'}</td><td class="sub wrap">${esc(l.err)}</td></tr>`).join('')}</tbody></table>` : '<div class="empty">Loading the lists…</div>'}
       <div class="srow"><div><b>abuse.ch Auth-Key</b><small>${s.abuse_key_set ? 'Set: ThreatFox is checked too.' : 'Optional, free. Adds ThreatFox.'}</small></div>
         <div class="ctl"><input type="password" id="s-key" style="width:240px" placeholder="${s.abuse_key_set ? '••••••••••••' : 'Paste key'}" spellcheck="false" autocomplete="off">
           <button class="btn" id="s-key-save">Save</button>${s.abuse_key_set ? '<button class="btn" id="s-key-del">Remove</button>' : ''}</div></div>
@@ -1324,7 +1324,7 @@ function renderSettings() {
       <div class="srow"><div><b>Use known-safe services</b><small>Off: every address is judged the same, as before</small></div>
         <label class="check"><input type="checkbox" id="s-safe" ${s.safe_on ? 'checked' : ''}></label></div>
       ${(s.safe || []).length ? `<table class="grid"><thead><tr><th>Service</th><th class="r">Entries</th><th>Updated</th><th>On</th><th></th></tr></thead><tbody>${s.safe.map(l => `<tr class="${s.safe_on ? '' : 'dim'}">
-          <td>${esc(l.name)}<div class="sub">${esc(l.desc)}</div>${l.err ? `<div class="sub err-text">${esc(l.err)}</div>` : ''}</td>
+          <td class="wrap">${esc(l.name)}<div class="sub">${esc(l.desc)}</div>${l.err ? `<div class="sub err-text">${esc(l.err)}</div>` : ''}</td>
           <td class="r num">${l.n.toLocaleString()}${l.excluded ? `<div class="sub">${l.excluded.toLocaleString()} left out</div>` : ''}</td>
           <td class="muted">${l.t ? ago(l.t) : l.id === 'google' || l.id === 'microsoft' ? 'not yet' : 'built in'}</td>
           <td><label class="check"><input type="checkbox" data-safe-svc="${esc(l.id)}" ${(s.safe_off || []).includes(l.id) ? '' : 'checked'} ${s.safe_on ? '' : 'disabled'}></label></td>

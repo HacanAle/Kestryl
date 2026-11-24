@@ -2,6 +2,12 @@
 
 All notable changes to Kestryl are listed here. Versions follow [Semantic Versioning](https://semver.org).
 
+## [1.8.2] - 2026-11-24
+
+### Fixed
+- **Settings fits the window.** The Known-safe services table no longer pushes the page sideways. In a narrower window the section menu moves to a row on top, and wide controls move under their label.
+- **Page header in a narrow window.** The title is no longer covered by the Simple/Advanced switch, and Upload/Download are no longer cut off: the small traffic graph hides first, then "Limited mode"/"Full monitoring" shrinks to its coloured dot, and the header wraps onto a second line if it still doesn't fit.
+
 ## [1.8.1] - 2026-11-24
 
 Coming from 1.8.0: install this version by hand once (Setup below). From now on Kestryl tells you about new versions and can install them itself.
@@ -50,6 +56,7 @@ The first public release.
 - Setup installs per machine into Program Files.
 - Releases are built by GitHub Actions with SHA-256 checksums and build provenance attestations.
 
+[1.8.2]: https://github.com/HacanAle/Kestryl/releases/tag/v1.8.2
 [1.8.1]: https://github.com/HacanAle/Kestryl/releases/tag/v1.8.1
 [1.8.0]: https://github.com/HacanAle/Kestryl/releases/tag/v1.8.0
 [1.7.9]: https://github.com/HacanAle/Kestryl/releases/tag/v1.7.9

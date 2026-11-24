@@ -121,6 +121,21 @@ body.mini .ri:hover::after { content: attr(data-label); position: absolute; left
 .head .live small { display: flex; align-items: center; gap: 5px; color: var(--tx3); font-size: 11px; line-height: 13px; }
 .head .live small .ic { font-size: 11px; }
 .head .live b { display: block; font: 400 16px/20px var(--n); font-variant-numeric: tabular-nums; min-width: 78px; }
+/* narrow window: drop the mini graph, then the mode words (the dot stays, with a tooltip), then wrap.
+   The subtitle stops sizing the title block, so the title itself is never covered. */
+.headbox { container-type: inline-size; flex: none; }
+@container (max-width: 1000px) {
+  .head { flex-wrap: wrap; height: auto; min-height: 72px; padding-block: 8px; row-gap: 8px; align-content: center; }
+  .head .tt { min-width: min-content; }
+  .head .sub { contain: inline-size; }
+  #chart { display: none; }
+  .head .live { margin-left: auto; }
+  .head .live b { min-width: 64px; }
+}
+@container (max-width: 780px) {
+  .mode .ml { display: none; }
+  .mode .dot { margin-right: 0; }
+}
 #banners:empty { display: none; }
 #banners { padding: 0 24px 10px 14px; display: grid; gap: 6px; flex: none; }
 .banner { padding: 8px 14px; font-size: 12.5px; border-radius: var(--r2); background: var(--panel); color: var(--tx2); display: flex; gap: 12px; align-items: center; }
@@ -407,6 +422,21 @@ details summary { cursor: pointer; color: var(--tx2); margin-top: 8px; }
 .dk { --pb: #0e1013; --pr: #0e1013; --pp: #171a1e; --pa: #33b1f2; }
 .lt { --pb: #eceef1; --pr: #eceef1; --pp: #ffffff; --pa: #0a84e0; }
 .ks { --pb: #e8f0f8; --pr: #d4e8fa; --pp: #ffffff; --pa: #0a78cf; }
+
+/* settings in a narrow window: the section menu becomes a row of pills on top, wide controls go under their label */
+#settings { container-type: inline-size; }
+#settings .ctl input, #settings .addrow input { max-width: 100%; min-width: 0; }
+@container (max-width: 860px) {
+  .sgrid { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .snav { flex-direction: row; flex-wrap: wrap; gap: 4px; position: static; }
+  .snav a { padding: 6px 12px; border-radius: 999px; }
+}
+@container (max-width: 620px) {
+  .srow:has(.ctl) { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .srow .ctl { justify-content: flex-start; }
+  .addrow input { flex: 1 1 180px; }
+  .th { width: calc(50% - 6px); }
+}
 
 /* ---------------------------------------------------------------- flash, modal, sheet, pop-up */
 .flash { position: fixed; left: calc(50% + 106px); bottom: 18px; transform: translateX(-50%); max-width: 720px; padding: 10px 18px; border-radius: 999px; background: var(--ink); color: var(--on-ink); border: 0; z-index: 30; box-shadow: var(--shadow); }
