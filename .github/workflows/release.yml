@@ -159,7 +159,10 @@ jobs:
           $files = Get-ChildItem dist | ForEach-Object { $_.FullName }
           gh release view $env:TAG *> $null
           if ($LASTEXITCODE -eq 0) {
+            # Built again: replace the files and refresh the notes from CHANGELOG.md.
             gh release upload $env:TAG @files --clobber
+            if ($LASTEXITCODE -ne 0) { throw "gh release upload failed with exit code $LASTEXITCODE" }
+            gh release edit $env:TAG --notes-file notes.md
           } else {
             gh release create $env:TAG @files --title "Kestryl $env:VERSION" --notes-file notes.md --verify-tag
           }
