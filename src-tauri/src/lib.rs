@@ -378,6 +378,15 @@ fn update_open_page() -> Res<()> {
     own_spawn(&mut cmd).map_err(|e| e.to_string())
 }
 
+/// Settings → Support Kestryl: opens the project's Ko-fi page in the default browser. The address
+/// is fixed here, so the page cannot ask Kestryl to open anything else.
+#[tauri::command]
+fn open_support() -> Res<()> {
+    let mut cmd = std::process::Command::new(windows_dir().join("explorer.exe"));
+    cmd.arg(update::SUPPORT);
+    own_spawn(&mut cmd).map_err(|e| e.to_string())
+}
+
 /// Downloads the signed setup, checks its signature against the key built into Kestryl, stops
 /// monitoring cleanly and runs it. The installer restarts Kestryl when it is done.
 #[tauri::command]
@@ -1638,6 +1647,7 @@ pub fn run() {
             update_check_now,
             set_update_check,
             update_open_page,
+            open_support,
             update_install,
             data_map,
             geo_refresh,

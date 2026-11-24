@@ -12,6 +12,10 @@
 </p>
 
 <p align="center">
+  <a href='https://ko-fi.com/N5G22AX1Z7' target='_blank'><img height='36' style='border:0px;height:36px;' src='https://storage.ko-fi.com/cdn/kofi6.png?v=6' border='0' alt='Buy Me a Coffee at ko-fi.com' /></a>
+</p>
+
+<p align="center">
   <b><a href="https://github.com/HacanAle/Kestryl/releases/latest">Download</a></b> ·
   <a href="docs/INSTALL.md">Install guide</a> ·
   <a href="docs/USER_GUIDE.md">User guide</a> ·
@@ -74,8 +78,8 @@ A security tool has full access to your PC, so you shouldn't have to take it on 
 
 | File | For |
 |---|---|
-| **`Kestryl_1.8.2_x64-setup.exe`** | Most people. Installs to *Program Files* (recommended: only administrators can change it there), adds a Start menu entry and an uninstaller. |
-| `Kestryl_1.8.2_x64_portable.exe` | No install. Run it from a folder of your choice, for example a USB stick or for a quick look. |
+| **`Kestryl_1.8.3_x64-setup.exe`** | Most people. Installs to *Program Files* (recommended: only administrators can change it there), adds a Start menu entry and an uninstaller. |
+| `Kestryl_1.8.3_x64_portable.exe` | No install. Run it from a folder of your choice, for example a USB stick or for a quick look. |
 | `SHA256SUMS.txt` | Checksums of both, to verify your download. |
 | Source code (zip / tar.gz) | Added by GitHub to every release. Build it yourself with [docs/BUILDING.md](docs/BUILDING.md). |
 
@@ -179,6 +183,12 @@ Found a vulnerability? Please report it privately through **[GitHub's private vu
 - Country outlines from [Natural Earth](https://www.naturalearthdata.com) (public domain), via [world-atlas](https://github.com/topojson/world-atlas).
 - Threat lists from [abuse.ch](https://abuse.ch) (Feodo Tracker, ThreatFox), [C2IntelFeeds](https://github.com/drb-ra/C2IntelFeeds), [Spamhaus DROP](https://www.spamhaus.org/drop/) and [Emerging Threats](https://rules.emergingthreats.net).
 - IP details on request from [ipinfo.io](https://ipinfo.io) and [rdap.org](https://rdap.org).
+
+## Support
+
+Kestryl is free and open source, with no ads and no account. If it's useful to you, you can buy me a coffee on [Ko-fi](https://ko-fi.com/N5G22AX1Z7). The app has the same link under Settings → Support Kestryl.
+
+<a href='https://ko-fi.com/N5G22AX1Z7' target='_blank'><img height='36' style='border:0px;height:36px;' src='https://storage.ko-fi.com/cdn/kofi6.png?v=6' border='0' alt='Buy Me a Coffee at ko-fi.com' /></a>
 
 ## License
 

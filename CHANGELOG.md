@@ -2,6 +2,11 @@
 
 All notable changes to Kestryl are listed here. Versions follow [Semantic Versioning](https://semver.org).
 
+## [1.8.3] - 2026-11-24
+
+### Fixed
+- Minor bug fixes in the UI.
+
 ## [1.8.2] - 2026-11-24
 
 ### Fixed
@@ -56,6 +61,7 @@ The first public release.
 - Setup installs per machine into Program Files.
 - Releases are built by GitHub Actions with SHA-256 checksums and build provenance attestations.
 
+[1.8.3]: https://github.com/HacanAle/Kestryl/releases/tag/v1.8.3
 [1.8.2]: https://github.com/HacanAle/Kestryl/releases/tag/v1.8.2
 [1.8.1]: https://github.com/HacanAle/Kestryl/releases/tag/v1.8.1
 [1.8.0]: https://github.com/HacanAle/Kestryl/releases/tag/v1.8.0

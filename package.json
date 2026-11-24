@@ -1,7 +1,7 @@
 {
   "name": "kestryl",
   "private": true,
-  "version": "1.8.2",
+  "version": "1.8.3",
   "scripts": { "tauri": "tauri" },
   "devDependencies": { "@tauri-apps/cli": "^2.12.1" }
 }

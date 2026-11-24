@@ -16,6 +16,8 @@ use std::time::Duration;
 pub const REPO: &str = "HacanAle/Kestryl";
 const API: &str = "https://api.github.com/repos/HacanAle/Kestryl/releases/latest";
 pub const PAGE: &str = "https://github.com/HacanAle/Kestryl/releases/latest";
+/// Ko-fi page shown in Settings → Support Kestryl.
+pub const SUPPORT: &str = "https://ko-fi.com/N5G22AX1Z7";
 
 pub static STATE: Mutex<State> = Mutex::new(State::new());
 

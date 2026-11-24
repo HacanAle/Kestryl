@@ -1213,7 +1213,7 @@ async function loadSettings() {
 }
 
 const SNAV = [['set-alerts', 'Alerts'], ['set-protect', 'Protection'], ['set-intel', 'Threat lists'], ['set-safe', 'Known-safe services'], ['set-geo', 'Country data'], ['set-theme', 'Theme'], ['set-tdest', 'Trusted IPs and domains'],
-  ['set-trust', 'Trusted programs'], ['set-mute', 'Muted alert types'], ['set-update', 'Updates'], ['set-see', 'What Kestryl can see'], ['set-diag', 'Diagnostics', 1]];
+  ['set-trust', 'Trusted programs'], ['set-mute', 'Muted alert types'], ['set-update', 'Updates'], ['set-support', 'Support Kestryl'], ['set-see', 'What Kestryl can see'], ['set-diag', 'Diagnostics', 1]];
 
 // Settings → Updates and the update alert: download, check the signature, install, restart.
 async function updateInstall(btn) {
@@ -1406,6 +1406,12 @@ function renderSettings() {
       })()}
     </div>
 
+    <div class="panel sec" id="set-support">
+      <div class="sech">Support Kestryl</div>
+      <div class="srow"><div><b>Buy me a coffee on Ko-fi</b><small>Kestryl is free and open source, with no ads and no account. A tip helps keep it going.</small></div>
+        <button class="kofi" id="s-kofi" title="Opens ko-fi.com in your browser"><img src="kofi.png" alt="Buy Me a Coffee at ko-fi.com"></button></div>
+    </div>
+
     <div class="panel sec" id="set-see">
       <div class="sech">What Kestryl can and cannot see</div>
       <p class="sd" style="line-height:19px">Kestryl sees every program's connections in both directions: where they go, the port, how many bytes each way, how regularly, and which names were looked up, and checks them against lists of known malware servers.
@@ -1476,6 +1482,7 @@ function renderSettings() {
     loadSettings();
   };
   if ($('#s-upd-go')) $('#s-upd-go').onclick = e => updateInstall(e.currentTarget);
+  $('#s-kofi').onclick = () => invoke('open_support').catch(err => flash(String(err), true));
   if ($('#s-upd-page')) $('#s-upd-page').onclick = () => invoke('update_open_page').catch(err => flash(String(err), true));
   $('#s-geo-go').onclick = e => act('geo_refresh', {}, e.currentTarget).then(() => setTimeout(loadSettings, 15000));
   $('#s-save').onclick = e => act('save_settings', { uploadMb: +$('#s-up').value || 20, popups: $('#s-pop').checked, popupMin: +$('#s-min').value }, e.currentTarget).then(loadSettings);
