@@ -2,7 +2,9 @@
 
 All notable changes to Kestryl are listed here. Versions follow [Semantic Versioning](https://semver.org).
 
-## [Unreleased]
+## [1.8.1] - 2026-11-24
+
+Coming from 1.8.0: install this version by hand once (Setup below). From now on Kestryl tells you about new versions and can install them itself.
 
 ### New
 - **Update notifications.** Once a day Kestryl asks its GitHub releases page whether a newer version is out, and tells you with a pop-up and an alert (once per version). Settings → Updates shows what's new, has **Check now**, and can turn the daily check off.
@@ -48,5 +50,6 @@ The first public release.
 - Setup installs per machine into Program Files.
 - Releases are built by GitHub Actions with SHA-256 checksums and build provenance attestations.
 
+[1.8.1]: https://github.com/HacanAle/Kestryl/releases/tag/v1.8.1
 [1.8.0]: https://github.com/HacanAle/Kestryl/releases/tag/v1.8.0
 [1.7.9]: https://github.com/HacanAle/Kestryl/releases/tag/v1.7.9
