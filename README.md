@@ -182,7 +182,7 @@ Found a vulnerability? Please report it privately through **[GitHub's private vu
 
 ## Support
 
-Kestryl is free and open source, with no ads and no account. If it's useful to you, you can buy me a coffee on [Ko-fi](https://ko-fi.com/N5G22AX1Z7). The app has the same link under Settings → Support Kestryl.
+Kestryl is free and open source, with no ads and no account. If it's useful to you, you can buy me a coffee on [Ko-fi](https://ko-fi.com/N5G22AX1Z7).
 
 <a href='https://ko-fi.com/N5G22AX1Z7' target='_blank'><img height='36' style='border:0px;height:36px;' src='https://storage.ko-fi.com/cdn/kofi6.png?v=6' border='0' alt='Buy Me a Coffee at ko-fi.com' /></a>
 
