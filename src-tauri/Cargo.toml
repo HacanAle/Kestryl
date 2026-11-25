@@ -1,6 +1,6 @@
 [package]
 name = "kestryl"
-version = "1.8.4"
+version = "1.8.5"
 description = "Kestryl: network security monitor for Windows"
 edition = "2021"
 

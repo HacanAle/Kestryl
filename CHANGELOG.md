@@ -2,10 +2,14 @@
 
 All notable changes to Kestryl are listed here. Versions follow [Semantic Versioning](https://semver.org).
 
-## [Unreleased]
+## [1.8.5] - 2026-11-25
 
 ### Fixed
-- **The home country (and other newer settings) reset after a Windows restart.** If Kestryl was ever set to start with Windows from another copy (a portable or self-built exe), the start-up task kept running that older copy after you installed a newer one with the setup. The older copy didn't know the new settings and saved them away. Now the copy installed in Program Files takes the start-up task over the first time it runs as administrator, and Kestryl keeps settings it doesn't recognise in its config instead of dropping them.
+- **The home country reset after a Windows restart.** If *Start with Windows* was turned on in another copy of Kestryl (a portable or self-built exe), the sign-in task kept starting that older copy even after a newer one was installed with the setup. The older copy didn't know the home country setting and saved it away, so Settings showed **From Windows** again after every restart. Two fixes:
+  - The copy installed in *Program Files* now takes the sign-in task over the first time it runs as administrator. A copy outside *Program Files* never takes it from another one.
+  - Kestryl now keeps settings it doesn't recognise in its config file instead of dropping them, so running an older or newer copy can't wipe another version's settings.
+
+  If your home country was reset, pick it again once in Settings → Country and company data → **Home country**.
 
 ## [1.8.4] - 2026-11-25
 

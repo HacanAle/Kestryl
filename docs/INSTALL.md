@@ -100,6 +100,8 @@ This creates a scheduled task, named *Kestryl*, that starts Kestryl hidden in th
 
 If Kestryl runs from a folder your own account can change (anything outside *Program Files*, such as a portable copy in Downloads), it warns you. Another program could swap that file before your next sign-in and get administrator rights through the task. Use the setup version to avoid that.
 
+Moving from the portable version to the setup? Nothing to redo: the first time the installed copy runs as administrator, it points the task at itself, so the old portable copy no longer starts at sign-in.
+
 ## The portable version
 
 `Kestryl_<version>_x64_portable.exe` is the same program without an installer. Things to know:
