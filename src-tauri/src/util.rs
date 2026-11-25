@@ -388,6 +388,13 @@ pub fn own_child_exited(pid: u32) {
     }
 }
 
+/// A new process got the id of a program Kestryl ran earlier: it is not Kestryl's. (The start
+/// event of a very quick check can arrive just after it exited, hence the margin.)
+pub fn own_child_reused(pid: u32, now: u64) {
+    let mut v = OWN_CHILDREN.lock().unwrap_or_else(|p| p.into_inner());
+    v.retain(|(p, t)| !(*p == pid && *t != 0 && *t + 3000 < now));
+}
+
 /// Started by Kestryl, and running or exited less than two minutes ago (events about it can
 /// arrive a little late).
 pub fn is_own_child(pid: u32) -> bool {

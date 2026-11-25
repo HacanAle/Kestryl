@@ -146,6 +146,10 @@ pub struct ProcInfo {
     pub parent_name: String,
     pub started: u64,
     pub exited: bool,
+    /// When Kestryl saw the process gone (ms, 0 = running or not known). Windows reuses
+    /// process ids, so a file open that arrives well after this came from a newer process.
+    #[serde(skip)]
+    pub gone: u64,
     pub sim: bool,
 }
 
@@ -290,6 +294,10 @@ struct DnsPending {
 
 /// A connection to a listed server, waiting for the process details: (pid, incoming, ip, domain, port, bytes out, list entry).
 type IntelPending = (u32, bool, IpAddr, String, u16, u64, intel::Hit);
+
+/// Events about a process can arrive this long (ms) after it exited; later ones with the same
+/// process id belong to a newer process.
+const REUSE_GAP: u64 = 3000;
 
 /// A file open from the kernel file trace that matched a pattern; judged once the
 /// process is known.
@@ -936,6 +944,7 @@ impl Engine {
         if self.procs.get(&pid).is_some_and(|p| !p.sim && (p.exited || !p.exe.eq_ignore_ascii_case(&exe))) {
             self.procs.remove(&pid);
         }
+        crate::util::own_child_reused(pid, now);
         self.proc_starts.insert(pid, (now, ppid, exe));
     }
 
@@ -1252,6 +1261,20 @@ impl Engine {
             if stale && !self.adopt_start(ev.pid) && !self.procs.contains_key(&ev.pid) {
                 if ev.t + 5000 > now {
                     self.file_pending.push(ev); // process details not resolved yet
+                }
+                continue;
+            }
+            // Windows reuses process ids. A file open that arrives seconds after the program with
+            // this id was seen gone came from a newer program whose start event is late: forget
+            // the old one rather than blame it (a closed Kestryl PowerShell check got the blame for
+            // a Docker helper reading .docker\config.json).
+            if let Some(gone) = self.procs.get(&ev.pid).filter(|p| !p.sim && p.exited && p.gone != 0 && ev.t > p.gone + REUSE_GAP).map(|p| p.gone) {
+                self.procs.remove(&ev.pid);
+                if self.proc_starts.get(&ev.pid).is_some_and(|s| s.0 <= gone) {
+                    self.proc_starts.remove(&ev.pid); // the old program's start
+                }
+                if ev.t + 5000 > now {
+                    self.file_pending.push(ev);
                 }
                 continue;
             }
@@ -3053,6 +3076,47 @@ mod tests {
         e.on_connect(MIN, 4343, Proto::Tcp, ip, 4444);
         e.tick(MIN + 3000);
         assert!(e.alerts.iter().any(|a| a.pid == 4343 && a.rule == "bad_port"));
+    }
+
+    #[test]
+    fn reused_process_id_does_not_blame_the_old_program() {
+        let mut e = eng();
+        let cfg = r"C:\Users\a\.docker\config.json".to_string();
+        let s = detect::secret_file(&cfg.to_lowercase());
+        assert!(s.is_some());
+        // A PowerShell check Kestryl ran a while ago: gone, its record kept for its traffic.
+        add_proc(&mut e, 4646, "powershell.exe", r"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe", "signed", "Microsoft Windows");
+        e.procs.get_mut(&4646).unwrap().exited = true;
+        e.procs.get_mut(&4646).unwrap().gone = 10_000;
+        // A short-lived helper got the same id and read a key file; its start event comes late.
+        e.on_file(20_000, 4646, cfg.clone(), s, false);
+        e.tick(20_500);
+        let docker = r"C:\Program Files\Docker\Docker\resources\bin\docker.exe";
+        e.on_proc_start(21_000, 4646, 4, docker.into());
+        e.sigs.insert(docker.to_lowercase(), SigInfo { status: "signed".into(), signer: "Docker Inc".into() });
+        e.tick(21_500);
+        assert!(!e.alerts.iter().any(|a| a.name == "powershell.exe"), "{:?}", e.alerts.iter().map(|a| &a.title).collect::<Vec<_>>());
+        // A program that read the file just before it exited is still judged.
+        add_proc(&mut e, 4747, "grabber.exe", r"C:\Users\a\Downloads\grabber.exe", "unsigned", "");
+        e.procs.get_mut(&4747).unwrap().exited = true;
+        e.procs.get_mut(&4747).unwrap().gone = 30_000;
+        e.on_file(31_000, 4747, cfg.clone(), s, false);
+        e.tick(31_500);
+        assert!(e.alerts.iter().any(|a| a.rule == "secret_read" && a.name == "grabber.exe"));
+    }
+
+    #[test]
+    fn reused_id_of_a_kestryl_check_is_not_trusted() {
+        crate::util::own_child_started(4848);
+        crate::util::own_child_exited(4848);
+        let now = crate::util::now_ms();
+        let mut e = eng();
+        // The quick check's own start event, arriving just after it exited.
+        e.on_proc_start(now + 500, 4848, 4, r"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe".into());
+        assert!(crate::util::is_own_child(4848));
+        // A different program that got the same id later is judged like any other.
+        e.on_proc_start(now + 10_000, 4848, 4, r"C:\Users\a\Downloads\evil.exe".into());
+        assert!(!crate::util::is_own_child(4848));
     }
 
     #[test]

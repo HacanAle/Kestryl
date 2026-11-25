@@ -402,6 +402,7 @@ fn make_info(sys: &sysinfo::System, pid: u32) -> ProcInfo {
                     .unwrap_or_default(),
                 started: p.start_time(),
                 exited: false,
+                gone: 0,
                 sim: false,
             }
         }
@@ -456,6 +457,9 @@ pub fn proc_loop(eng: Shared, sig_tx: Sender<String>) {
                         i = ProcInfo { exited: true, ..s }; // gone already, but its start was seen
                     }
                 }
+                if i.exited {
+                    i.gone = now;
+                }
                 if !i.exe.is_empty() {
                     let k = i.exe_key();
                     if !e.sigs.contains_key(&k) {
@@ -471,7 +475,11 @@ pub fn proc_loop(eng: Shared, sig_tx: Sender<String>) {
                     continue;
                 }
                 match alive.get(pid) {
-                    None => p.exited = true,
+                    None if !p.exited => {
+                        p.exited = true;
+                        p.gone = now;
+                    }
+                    None => {}
                     Some(st) if p.started != 0 && *st != p.started => reused.push(*pid),
                     _ => {}
                 }
@@ -575,6 +583,7 @@ pub fn simulate(eng: Shared) {
                     parent_name: if *pid == 90008 { "services.exe".into() } else { "explorer.exe".into() },
                     started: 1,
                     exited: false,
+                    gone: 0,
                     sim: true,
                 },
             );
