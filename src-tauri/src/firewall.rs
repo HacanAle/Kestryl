@@ -243,6 +243,34 @@ pub fn autostart_on() -> bool {
         .unwrap_or(false)
 }
 
+/// The program the "start with Windows" task runs, if the task exists.
+pub fn autostart_exe() -> Option<String> {
+    run_ps("$t = Get-ScheduledTask -TaskName 'Kestryl' -ErrorAction SilentlyContinue; if ($t) { $t.Actions[0].Execute }")
+        .ok()
+        .map(|s| s.trim().trim_matches('"').to_string())
+        .filter(|s| !s.is_empty())
+}
+
+/// After installing with the setup, the task may still start an older copy from another
+/// folder (a portable or self-built exe). That copy then runs at every sign-in and, not
+/// knowing newer settings, saves them away. The installed copy takes the task over. A copy
+/// outside Program Files never takes it from another one.
+pub fn autostart_follow_me() {
+    let Ok(me) = std::env::current_exe() else { return };
+    let me = me.display().to_string();
+    if !in_protected_dir(&me) {
+        return;
+    }
+    if let Some(old) = autostart_exe() {
+        if !old.eq_ignore_ascii_case(&me) {
+            match set_autostart(true) {
+                Ok(_) => log(&format!("start with Windows now runs {me} (was {old})")),
+                Err(e) => log(&format!("could not point start with Windows at {me}: {e}")),
+            }
+        }
+    }
+}
+
 /// Scheduled task at logon with highest privileges: full monitoring without a UAC prompt.
 pub fn set_autostart(on: bool) -> Result<String, String> {
     if !on {

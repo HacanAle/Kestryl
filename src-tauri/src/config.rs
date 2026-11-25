@@ -59,6 +59,10 @@ pub struct Config {
     pub analytics: HashMap<String, AnalyticsState>,
     /// HTTPS decryption: password hash, lock-out, and what to undo after a crash.
     pub decrypt: crate::decrypt::Cfg,
+    /// Settings this version does not know (written by a newer or older Kestryl), kept as
+    /// they are so saving here never wipes them.
+    #[serde(flatten)]
+    pub extra: serde_json::Map<String, serde_json::Value>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
@@ -139,6 +143,7 @@ impl Default for Config {
             safe_off: vec![],
             analytics: HashMap::new(),
             decrypt: crate::decrypt::Cfg::default(),
+            extra: serde_json::Map::new(),
         }
     }
 }
@@ -221,5 +226,14 @@ mod tests {
     fn home_country_defaults_to_windows() {
         assert_eq!(Config::default().home_country, "");
         assert_eq!(parse(r#"{"home_country":"JP"}"#).home_country, "JP");
+    }
+
+    #[test]
+    fn keeps_settings_it_does_not_know() {
+        let c = parse(r#"{"home_country":"GB","from_a_newer_version":{"a":1}}"#);
+        let out: serde_json::Value = serde_json::from_str(&serde_json::to_string(&c).unwrap()).unwrap();
+        assert_eq!(out["from_a_newer_version"]["a"], 1);
+        assert_eq!(out["home_country"], "GB");
+        assert!(out.get("extra").is_none());
     }
 }

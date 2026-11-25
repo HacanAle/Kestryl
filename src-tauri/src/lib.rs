@@ -1262,6 +1262,7 @@ fn firewall_start(eng: &Shared) {
     if is_elevated() {
         // A decryption session cut short by a crash: proxy back, certificate gone.
         decrypt::cleanup_after_crash(eng);
+        firewall::autostart_follow_me();
         // Every blocked domain's rule gets its saved address list again: a run without
         // administrator rights, or a failed update, may have left the two different.
         let mut e = lock(eng);
