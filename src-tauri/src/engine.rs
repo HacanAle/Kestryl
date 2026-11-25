@@ -340,6 +340,10 @@ pub struct Engine {
     dns_pids: HashSet<u32>,
     dns_pending: Vec<DnsPending>,
     burst: HashMap<(u32, String), VecDeque<(u64, String)>>,
+    /// Names the hosts file answers. Windows never sends them to a DNS server, so they
+    /// cannot carry data out. Reading the DNS cache (Get-DnsClientCache) "looks up" every
+    /// one of them at once, which looked like tunnelling with a large hosts blocklist.
+    hosts_names: HashSet<String>,
     pub alerts: VecDeque<Alert>,
     seq: u64,
     pub notify: Vec<Alert>,
@@ -463,6 +467,7 @@ impl Engine {
             dns_pids: HashSet::new(),
             dns_pending: Vec::new(),
             burst: HashMap::new(),
+            hosts_names: HashSet::new(),
             alerts: alerts.into_iter().filter(|a| !a.sim).collect(),
             seq,
             notify: Vec::new(),
@@ -848,17 +853,18 @@ impl Engine {
         }
         let mut flag = String::new();
         let name_trusted = self.name_trust(&name).0;
+        let local = self.hosts_names.contains(&name);
         if let Some(h) = self.intel.domain(&name).filter(|_| !name_trusted && status == 0 && !self.is_own_pid(pid)) {
             self.dns_pending.push(DnsPending { t: now, pid, q: name.clone(), burst: false, n: 0, intel: Some(h) });
             flag = "known malware server".into();
-        } else if name_trusted {
-            // trusted: no tunnelling checks
+        } else if name_trusted || local {
+            // trusted, or answered by the hosts file: no tunnelling checks
         } else if let Some((len, _)) = detect::dns_long_label(&name) {
             self.dns_pending.push(DnsPending { t: now, pid, q: name.clone(), burst: false, n: len, intel: None });
             flag = "unusual name".into();
         }
         let base = base_domain(&name);
-        if base != name && !name_trusted {
+        if base != name && !name_trusted && !local {
             let q = self.burst.entry((pid, base.clone())).or_default();
             q.push_back((now, name.clone()));
             while q.front().is_some_and(|(t, _)| *t + MIN < now) || q.len() > 400 {
@@ -2163,6 +2169,13 @@ impl Engine {
         }
         let first = !self.cfg.baseline.set || self.sim;
         let finds = crate::audit::diff(&mut self.cfg.baseline, &mut v, first, now);
+        self.hosts_names = v["hosts_list"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(|h| h["host"].as_str())
+            .map(|h| h.trim_end_matches('.').to_string())
+            .collect();
         self.dirty_cfg = true;
         for fd in finds {
             self.raise_sys(now, fd, "Windows");
@@ -2724,6 +2737,28 @@ mod tests {
         }
         e.tick(2000);
         assert!(e.alerts.iter().any(|a| a.rule == "dns_tunnel" && a.sev == 3));
+    }
+
+    #[test]
+    fn dns_burst_skips_hosts_file_names() {
+        // A hosts blocklist with many names under one domain: reading the DNS cache
+        // reports each of them as a lookup, but none of them reaches a DNS server.
+        let mut e = eng();
+        let names: Vec<String> = (0..45).map(|i| format!("q{i:03}x9f2k.stats-example.io")).collect();
+        let hosts: Vec<String> = names.iter().map(|n| format!("0.0.0.0 {n}")).collect();
+        e.apply_audit(
+            500,
+            json!({
+                "defender": { "rtp": true, "sigAge": 1 }, "exclOk": true, "exclusions": [], "firewall": [], "roots": [],
+                "proxy": { "on": false, "server": "", "pac": "", "winhttp": "" }, "hosts": hosts, "startup": [], "dns": [],
+                "rdp": false, "fwRules": [], "selfTp": "",
+            }),
+        );
+        for (i, n) in names.iter().enumerate() {
+            e.on_dns(1000 + i as u64, 7, n, vec!["0.0.0.0".parse().unwrap()], 0);
+        }
+        e.tick(2000);
+        assert!(!e.alerts.iter().any(|a| a.rule == "dns_tunnel"), "{:?}", e.alerts.iter().map(|a| &a.rule).collect::<Vec<_>>());
     }
 
     #[test]
