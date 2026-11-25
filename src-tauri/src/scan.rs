@@ -93,12 +93,25 @@ pub fn defender_scan(path: &str) -> Result<Vec<String>, String> {
     hide_window(&mut cmd);
     let out = own_output(&mut cmd).map_err(|e| format!("could not start Defender's scanner ({e})"))?;
     let text = String::from_utf8_lossy(&out.stdout).into_owned();
-    match out.status.code() {
+    read_result(out.status.code(), &text)
+}
+
+/// True when MpCmdRun says the scan itself did not run ("CmdTool: Failed with hr = 0x80004005").
+/// This part of its output is not translated.
+fn scan_failed(out: &str) -> bool {
+    out.lines().any(|l| l.contains("Failed with hr") || l.trim_start().starts_with("[Failed]"))
+}
+
+/// MpCmdRun's exit code and output: threat names, empty = clean.
+fn read_result(code: Option<i32>, text: &str) -> Result<Vec<String>, String> {
+    let threats = parse_threats(text);
+    match code {
         Some(0) => Ok(vec![]),
-        Some(2) => {
-            let t = parse_threats(&text);
-            Ok(if t.is_empty() { vec!["a threat (name not given)".into()] } else { t })
-        }
+        Some(2) if !threats.is_empty() => Ok(threats),
+        // Exit code 2 means "threat found", but MpCmdRun also exits with 2 when it cannot
+        // scan at all, e.g. while another antivirus has turned Defender off. A failure with
+        // no threat listed is an error, not a detection.
+        Some(2) if !scan_failed(text) => Ok(vec!["a threat (name not given)".into()]),
         c => {
             let last = text.lines().rev().find(|l| !l.trim().is_empty()).unwrap_or("").trim().to_string();
             Err(if last.is_empty() {
@@ -155,6 +168,18 @@ mod tests {
         let out = "Scan starting...\nScan finished.\nScanning C:\\x\\a.exe found 1 threats.\n\n<==LIST==>\n---- Threat information ----\nThreat                  : Trojan:Win32/AgentTesla!ml\nResources               : 1 total\n    file                : C:\\x\\a.exe\n";
         assert_eq!(parse_threats(out), vec!["Trojan:Win32/AgentTesla!ml".to_string()]);
         assert!(parse_threats("Scanning C:\\x\\b.exe found no threats.").is_empty());
+    }
+
+    #[test]
+    fn failed_scan_is_not_a_threat() {
+        // Defender turned off by another antivirus: exit code 2, but nothing was scanned.
+        let out = "[Failed][0x80004005] Errore non specificato.\nCmdTool: Failed with hr = 0x80004005. Check C:\\Temp\\MpCmdRun.log for more information\n";
+        let r = read_result(Some(2), out);
+        assert!(r.as_ref().is_err_and(|e| e.contains("Failed with hr")), "{r:?}");
+        let found = "Scanning C:\\x\\a.exe found 1 threats.\n---- Threat information ----\nThreat                  : Trojan:Win32/AgentTesla!ml\n";
+        assert_eq!(read_result(Some(2), found).unwrap(), vec!["Trojan:Win32/AgentTesla!ml".to_string()]);
+        assert_eq!(read_result(Some(2), "Scanning C:\\x\\a.exe found 1 threats.\n").unwrap(), vec!["a threat (name not given)".to_string()]);
+        assert!(read_result(Some(0), "Scanning C:\\x\\b.exe found no threats.").unwrap().is_empty());
     }
 
     #[test]
