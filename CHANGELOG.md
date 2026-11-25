@@ -2,6 +2,13 @@
 
 All notable changes to Kestryl are listed here. Versions follow [Semantic Versioning](https://semver.org).
 
+## [1.8.6] - 2026-11-25
+
+### Fixed
+- **False "opened SSH, cloud or FTP login keys" alerts that said *Started by Kestryl.exe*.** Windows reuses process ids. When a short-lived program (for example a Docker helper reading `.docker\config.json`) got the id of one of Kestryl's own finished PowerShell checks, its file open could be blamed on that old check and shown as High. Kestryl now notices that the old program was already gone and waits for the real one. A program that really reads a key file and quits right away is still reported.
+- **"Possible DNS tunnelling" for names in the hosts file.** A large hosts blocklist (for example hundreds of `*.adobestats.io` lines) raised the alert whenever a program read the DNS cache. Windows answers hosts-file names itself and never sends them to a DNS server, so they now skip the tunnelling checks. Thanks to @Matteo842 (#9).
+- **Programs listed as malware when Defender couldn't scan.** With another antivirus active, Microsoft Defender is off and its scanner fails, but it reports that with the same exit code as "threat found". A failed scan is now shown as an error, not as malware. Thanks to @Matteo842 (#8).
+
 ## [1.8.5] - 2026-11-25
 
 ### Fixed
